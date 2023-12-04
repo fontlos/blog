@@ -1,5 +1,5 @@
 site:
-  subtitle: Fontlos's Blog
+  subtitle: 芳塔洛斯
   author: 芳塔洛斯
   nick: Fontlos
   description: Debug Everything<br />有目的的人生才会迷惘<br />我来人间一趟<br />不过散步一场
@@ -66,7 +66,7 @@ gitalk:
   autoExpand: true
   clientID: 'a1c1d5f403c4c0e2f4cd'
   clientSecret: '066aa7e1b6f2148f8abea26f711ea2b0ed724ebd'
-  repo: 'fontlos.github.io' ## Github 对应的仓库名字
+  repo: 'blog' ## Github 对应的仓库名字
   owner: 'fontlos' ## owner name
   admin: ['fontlos'] ## ['admin name']
   id: uid
