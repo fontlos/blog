@@ -6,8 +6,8 @@ site:
   link: '/'
   language: zh-CN
   multi_language: true
-  logo: https://blog.fontlos.com/icons/logo.png
-  avatar: https://blog.fontlos.com/icons/avatar.jpg
+  logo: https://fontlos.com/icons/logo.png
+  avatar: https://fontlos.com/icons/avatar.jpg
   started_date: 2021-02-14
   # Path unique identifier
   # uid: use unique ID
@@ -17,7 +17,7 @@ site:
 authors:
   Fontlos:
     name: Fontlos
-    avatar: https://blog.fontlos.com/icons/avatar.jpg
+    avatar: https://fontlos.com/icons/avatar.jpg
     link: https://github.com/fontlos
     description: Debug everything.
     socials:
@@ -48,7 +48,7 @@ socials:
   github: https://github.com/fontlos
   customs:
     bilibili:
-      icon: https://blog.fontlos.com/icons/bilibili.svg
+      icon: https://fontlos.com/icons/bilibili.svg
       link: https://space.bilibili.com/362772872
   #   icon: iconfont icon-baidu
   #   icon: far fa-address-book
@@ -64,14 +64,14 @@ site_meta:
 gitalk:
   enable: true
   autoExpand: true
-  clientID: ''
-  clientSecret: ''
-  repo: '' ## dev-blo-comments
-  owner: '' ## owner name
-  admin: [''] ## ['admin_name']
+  clientID: 'a1c1d5f403c4c0e2f4cd'
+  clientSecret: '066aa7e1b6f2148f8abea26f711ea2b0ed724ebd'
+  repo: 'fontlos.github.io' ## Github 对应的仓库名字
+  owner: 'fontlos' ## owner name
+  admin: ['fontlos'] ## ['admin name']
   id: uid
-  language: en
-  distractionFreeMode: true
+  language: zh-CN
+  distractionFreeMode: true # 无干扰模式
   recentComment: true
   proxy: ''
 
@@ -86,8 +86,8 @@ copy_protection:
     cn: 作者 芳塔洛斯
     en: Author Fontlos
   link:
-    cn: 本文来自于 https://blog.fontlos.com
-    en: Article is from https://blog.fontlos.com
+    cn: 本文来自于 https://fontlos.com
+    en: Article is from https://fontlos.com
   license:
     cn: 博客内容遵循 署名-非商业性使用-相同方式共享 4.0 国际 (CC BY-NC-SA 4.0) 协议
     en: This content is shared under the CC BY-NC-SA 4.0 protocol (Non-Commercial)
