@@ -2,7 +2,7 @@ site:
   subtitle: 芳塔洛斯
   author: 芳塔洛斯
   nick: Fontlos
-  description: Debug Everything<br />有目的的人生才会迷惘<br />我来人间一趟<br />不过散步一场
+  description: 矢穿而羽不乱, 心死而翼未伤<br />来人间一趟, 为散步一场<br />待走出岁月, 何样的彼方<br />才配得上这一路的颠沛与时光
   link: '/'
   language: zh-CN
   multi_language: true
@@ -19,7 +19,7 @@ authors:
     name: Fontlos
     avatar: https://fontlos.com/icons/avatar.jpg
     link: https://github.com/fontlos
-    description: Debug everything.
+    description: Debug the world.
     socials:
       github: https://github.com/fontlos
 
