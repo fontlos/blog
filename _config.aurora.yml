@@ -3,16 +3,16 @@ site:
   author: 芳塔洛斯
   nick: Fontlos
   description: 矢穿而羽不乱, 心死而翼未伤<br />来人间一趟, 为散步一场<br />待走出岁月, 何样的彼方<br />才配得上这一路的颠沛与时光
-  link: '/'
-  language: zh-CN
-  multi_language: true
-  logo: https://fontlos.com/icons/logo.png
-  avatar: https://fontlos.com/icons/avatar.jpg
-  started_date: 2021-02-14
-  # Path unique identifier
-  # uid: use unique ID
-  # slug: use generated slug base on title
-  pathSlug: 'slug'
+	link: "/"
+	language: zh-CN
+	multi_language: true
+	logo: https://fontlos.com/icons/logo.png
+	avatar: https://fontlos.com/icons/avatar.jpg
+	started_date: 2021-02-14
+	# 路径标识符
+	# uid: 使用唯一 ID
+	# slug: 生成基于标题的路径
+	pathSlug: "slug"
 
 authors:
   Fontlos:
@@ -24,99 +24,95 @@ authors:
       github: https://github.com/fontlos
 
 menu:
-  About: true
-  Tags: true
-  Archives: true
-  Links: true
-  Contact:
-    name: 'Contact'
-    i18n:
-      en: Contact Me
-      zh-CN: 联系
-    path: 'mailto:fontlos@fontlos.com'
+	About: true
+	Tags: true
+	Archives: true
+	Links: true
+	Contact:
+		name: "Contact"
+		i18n:
+			en: Contact Me
+			zh-CN: 联系
+		path: "mailto:fontlos@fontlos.com"
 
 theme:
-  dark_mode: 'auto'
-  profile_shape: diamond # support `circle`, `diamond`, `rounded`
-  feature: true
-  gradient:
-    color_1: '#24c6dc'
-    color_2: '#5433ff'
-    color_3: '#ff0099'
+	dark_mode: "auto"
+	profile_shape: diamond # 支持 `circle`, `diamond`, `rounded`
+	feature: true
+	gradient:
+		color_1: "#24c6dc"
+		color_2: "#5433ff"
+		color_3: "#ff0099"
 
 socials:
-  github: https://github.com/fontlos
-  customs:
-    bilibili:
-      icon: https://fontlos.com/icons/bilibili.svg
-      link: https://space.bilibili.com/362772872
-  #   icon: iconfont icon-baidu
-  #   icon: far fa-address-book
+	github: https://github.com/fontlos
+	customs:
+		bilibili:
+			icon: https://fontlos.com/icons/bilibili.svg
+			link: https://space.bilibili.com/362772872
 
 site_meta:
-  cdn: cn
-  favicon:
-  description: 'Debug everything.'
-  keywords: 'Programming, Web, Frontend, Backend ,Rust, Blog, Aurora, Fontlos, 芳塔洛斯'
-  author: 'Fontlos'
+	cdn: cn
+	favicon:
+	description: "Debug everything."
+	keywords: "Programming, Web, Frontend, Backend ,Rust, Blog, Aurora, Fontlos, 芳塔洛斯"
+	author: "Fontlos"
 
-# For local development only!
 gitalk:
-  enable: true
-  autoExpand: true
-  clientID: 'a1c1d5f403c4c0e2f4cd'
-  clientSecret: '066aa7e1b6f2148f8abea26f711ea2b0ed724ebd'
-  repo: 'blog' ## Github 对应的仓库名字
-  owner: 'fontlos' ## owner name
-  admin: ['fontlos'] ## ['admin name']
-  id: uid
-  language: zh-CN
-  distractionFreeMode: true # 无干扰模式
-  recentComment: true
-  proxy: ''
+	enable: true
+	autoExpand: true
+	clientID: "a1c1d5f403c4c0e2f4cd"
+	clientSecret: "066aa7e1b6f2148f8abea26f711ea2b0ed724ebd"
+	repo: "blog" ## Github 对应的仓库名字
+	owner: "fontlos" ## owner name
+	admin: ["fontlos"] ## ['admin name']
+	id: uid
+	language: zh-CN
+	distractionFreeMode: true # 无干扰模式
+	recentComment: true
+	proxy: ""
 
-# Enable Busuanzi statistic plugin
 # see http://ibruce.info/2015/04/04/busuanzi/
 busuanzi:
-  enable: false
+	enable: false
 
 copy_protection:
-  enable: true
-  author:
-    cn: 作者 芳塔洛斯
-    en: Author Fontlos
-  link:
-    cn: 本文来自于 https://fontlos.com
-    en: Article is from https://fontlos.com
-  license:
-    cn: 博客内容遵循 署名-非商业性使用-相同方式共享 4.0 国际 (CC BY-NC-SA 4.0) 协议
-    en: This content is shared under the CC BY-NC-SA 4.0 protocol (Non-Commercial)
+	enable: true
+	author:
+		cn: 作者 芳塔洛斯
+		en: Author Fontlos
+	link:
+		cn: 本文来自于 https://fontlos.com
+		en: Article is from https://fontlos.com
+	license:
+		cn: 博客内容遵循 署名-非商业性使用-相同方式共享 4.0 国际 (CC BY-NC-SA 4.0) 协议
+		en: This content is shared under the CC BY-NC-SA 4.0 protocol (Non-Commercial)
 
 injects:
-  scripts:
-  css:
+	scripts:
+	css:
 
 footer_links:
   - title: #总标题
     links:
-      - title: # link title
+      - title:
         url: # URL link
-      - title: # link title
+      - title:
         url: # URL link
-      - title: Friends # link of friends mode / 友链模式
+      - title: Friends # 友链模式
         mode: 'links'
 
 shiki:
-  enable: true
-  theme: one-dark-pro
-  backgroundColor: "#1a1a1a"
+	enable: true
+	theme: one-dark-pro
+	backgroundColor: "#1a1a1a"
 
 aurora_bot:
   enable: true
   locale: zh-CN
   bot_type: dia
   tips:
-    # 这些是 Dia 每30秒会说的随机消息。
+    # 这些是 Dia 每30秒会说的随机消息.
     messages:
       - 你好, 我是 <span>Dia</span>, 好高兴遇见你～
       - 好久不见, 日子过得好快呢……
@@ -126,22 +122,22 @@ aurora_bot:
       - 学习使我们快乐, 快乐使我们更想学习～
       - 你知道吗?你可以<span>点击我</span>返回页面顶部哦～
       # 这是一个特殊的函数, 它将触发 quotes API
-      # 和 Dia 会说出每日引用的信息。
+      # 和 Dia 会说出每日引用的信息.
       - showQuote
 
-    # 将在用户打开浏览器控制台时触发。
+    # 将在用户打开浏览器控制台时触发.
     console: 哈哈, 你打开了控制台, 是想要看看我的小秘密吗?
 
-    # 当用户从你的博客上复制内容时触发。
+    # 当用户从你的博客上复制内容时触发.
     copy: 你都复制了些什么呀, 转载要记得加上出处哦!
 
-    # 这将在用户返回窗口时触发。
+    # 这将在用户返回窗口时触发.
     visibility_change: 呀, 欢迎回来～
 
-    # 欢迎, 号码是一天中的时间。
+    # 欢迎, 号码是一天中的时间.
     welcome:
       '24': 你是夜猫子呀?这么晚还不睡觉, 明天起的来嘛?
-      '5_7': 早上好! 一日之计在于晨, 美好的一天就要开始了。
+      '5_7': 早上好! 一日之计在于晨, 美好的一天就要开始了.
       '7_11': 上午好! 工作顺利嘛, 不要久坐, 多起来走动走动哦!
       '11_13': 中午了, 工作了一个上午, 现在是午餐时间!
       '13_17': 午后很容易犯困呢, 今天的运动目标完成了吗?
@@ -151,24 +147,24 @@ aurora_bot:
         - 已经这么晚了呀, 早点休息吧, 晚安～
         - 深夜时要爱护眼睛呀!
 
-    # 当用户来自搜索引擎时使用。
+    # 当用户来自搜索引擎时使用.
     referrer:
-      # 用户来自你自己的网站。
+      # 用户来自你自己的网站.
       self: 欢迎来到<span>「[PLACEHOLDER]」</span>
-      # 用户来自百度搜索引擎。
+      # 用户来自百度搜索引擎.
       baidu: Hello! 来自 百度搜索 的朋友<br>你是搜索 <span>「[PLACEHOLDER]」</span> 找到的我吗?
-      # 用户来自360搜索引擎。
+      # 用户来自360搜索引擎.
       so: Hello! 来自 360搜索 的朋友<br>你是搜索 <span>「[PLACEHOLDER]」</span> 找到的我吗?
-      # 用户来自谷歌搜索引擎。
+      # 用户来自谷歌搜索引擎.
       google: Hello! 来自 谷歌搜索 的朋友<br>欢迎阅读<span>「[PLACEHOLDER]」</span>
-      # 用户来自另一个网站。
+      # 用户来自另一个网站.
       site: Hello! 来自 <span>[PLACEHOLDER]</span> 的朋友
-      # 任何其他来源。
+      # 任何其他来源.
       other: 感谢您阅读： <span>「[PLACEHOLDER]」</span>
 
     # '鼠标悬停'到特定的HTML标签
     # selector: 任何css选择器
-    # text: 这是Dia将要传达的信息。(如果你想要的
+    # text: 这是Dia将要传达的信息.(如果你想要的
     #       Dia从一组信息中随机说出一个, 设置它
     #       数组, 否则只是纯文本)
     mouseover:
@@ -181,9 +177,9 @@ aurora_bot:
       # 悬浮在 Home 菜单
       - selector: "[data-menu='Home']"
         text:
-          - 点击前往首页, 想回到上一页可以使用浏览器的后退功能哦。
+          - 点击前往首页, 想回到上一页可以使用浏览器的后退功能哦.
           - 点它就可以回到首页啦!
-          - 回首页看看吧。
+          - 回首页看看吧.
       # 悬浮在 About 菜单
       - selector: "[data-menu='About']"
         text:
@@ -202,20 +198,20 @@ aurora_bot:
           - 使用标签可以更好的分类你的文章哦～
       # 悬浮在 language 菜单
       - selector: "[data-dia='language']"
-        text: 主人的博客支持多种语言。
+        text: 主人的博客支持多种语言.
       # 悬浮在黑白切换按钮上
       - selector: "[data-dia='light-switch']"
         text: 您可以点击这里切换黑白模式哦!
       # 悬浮在作者简介上
       - selector: "[data-dia='author']"
         text:
-          - 这是我主人的简介。
-          - 点击其中任何一个链接都可以传送到我主人的其他世界。
+          - 这是我主人的简介.
+          - 点击其中任何一个链接都可以传送到我主人的其他世界.
       # 悬浮在作跳转评论按钮上
       - selector: "[data-dia='jump-to-comment']"
         text:
           - 你想看看评论吗?
-          - 点击这里可以帮助你直接跳转到评论部分。
+          - 点击这里可以帮助你直接跳转到评论部分.
 
     # '鼠标点击'为特定的HTML标签
     click:
@@ -229,7 +225,7 @@ aurora_bot:
         text:
           - 希望你会喜欢这篇文章：<span>「{text}」</span>.
           - 您的选择真的不错哦! 好好享受这篇文章吧～
-          - 希望您能从 <span>「{text}」</span>这篇文章中学到点东西。
+          - 希望您能从 <span>「{text}」</span>这篇文章中学到点东西.
       # 鼠标点击跳转评论输入框（Gitalk）
       - selector: '.gt-header-textarea'
         text:
@@ -248,8 +244,8 @@ aurora_bot:
     # 在特定的日期
     # date: 特别活动的日期(格式:月/日或月/日-月/日)
     # text:
-    # ---只使用一个简单的字符串。
-    # -——消息的随机集合, 使用数组配置格式。
+    # ---只使用一个简单的字符串.
+    # -——消息的随机集合, 使用数组配置格式.
     events:
       - date: 01/01
         text: '<span>元旦</span>了呢, 新的一年又开始了, 今年是{year}年～'
@@ -266,7 +262,7 @@ aurora_bot:
       - date: 06/01
         text: '<span>儿童节</span>了呢, 快活的时光总是短暂, 要是永远长不大该多好啊…'
       - date: '09/03'
-        text: '<span>中国人民抗日战争胜利纪念日</span>, 铭记历史、缅怀先烈、珍爱和平、开创未来。'
+        text: '<span>中国人民抗日战争胜利纪念日</span>, 铭记历史、缅怀先烈、珍爱和平、开创未来.'
       - date: '09/10'
         text: '<span>教师节</span>, 在学校要给老师问声好呀～'
       - date: 10/01

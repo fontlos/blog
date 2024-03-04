@@ -72,10 +72,10 @@ fn main() {
     {
         // 在当前的花括号作用域内, 对之前的变量进行遮蔽, 不影响外部作用域
         let a = a * 2;
-        println!("The value of x in the inner scope is: {}", x);
+        println!("The value of a in the inner scope is: {}", a);
     }
 
-    println!("The value of x is: {}", x);
+    println!("The value of a is: {}", a);
 }
 ```
 
