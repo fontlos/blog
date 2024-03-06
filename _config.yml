@@ -91,7 +91,3 @@ exclude:
 ignore:
 
 theme: aurora
-deploy:
-    type: "git"
-    repository: git@github.com:fontlos/blog.git
-    branch: gh-pages

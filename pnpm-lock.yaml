@@ -8,9 +8,6 @@ dependencies:
   hexo:
     specifier: ^6.3.0
     version: 6.3.0
-  hexo-deployer-git:
-    specifier: ^4.0.0
-    version: 4.0.0
   hexo-generator-archive:
     specifier: ^2.0.0
     version: 2.0.0
@@ -1549,20 +1546,6 @@ packages:
       tildify: 2.0.0
     dev: false
 
-  /hexo-deployer-git@4.0.0:
-    resolution: {integrity: sha512-28t1Q+4taB/UaBAP52W3mD/wcCwa2y2zBieUfBJFBZudbmVgiKJB5YedYILeyI5QByaUKAOwoupmdTbocdQ+CQ==}
-    engines: {node: '>=14'}
-    dependencies:
-      bluebird: 3.7.2
-      hexo-fs: 4.1.1
-      hexo-util: 2.7.0
-      luxon: 3.4.4
-      nunjucks: 3.2.4
-      picocolors: 1.0.0
-    transitivePeerDependencies:
-      - chokidar
-    dev: false
-
   /hexo-front-matter@0.2.3:
     resolution: {integrity: sha512-GL/pGfYqsvjMgxjhOWv1zAc7t4JoGUow+CH9Tes/5N2wKxxTzt2woKEMHz1+c01CmhdVYUR4lO3R1ZAcxc0caA==}
     dependencies:
@@ -2348,11 +2331,6 @@ packages:
     dependencies:
       pseudomap: 1.0.2
       yallist: 2.1.2
-    dev: false
-
-  /luxon@3.4.4:
-    resolution: {integrity: sha512-zobTr7akeGHnv7eBOXcRgMeCP6+uyYsczwmeRCauvpvaAltgNyTbLH/+VaEAPUeWBT+1GuNmz4wC/6jtQzbbVA==}
-    engines: {node: '>=12'}
     dev: false
 
   /magic-string@0.30.8:
