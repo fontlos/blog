@@ -58,19 +58,16 @@ site_meta:
 	keywords: "Programming, Web, Frontend, Backend ,Rust, Blog, Aurora, Fontlos, 芳塔洛斯"
 	author: "Fontlos"
 
-gitalk:
-	enable: true
-	autoExpand: true
-	clientID: "a1c1d5f403c4c0e2f4cd"
-	clientSecret: "066aa7e1b6f2148f8abea26f711ea2b0ed724ebd"
-	repo: "blog" ## Github 对应的仓库名字
-	owner: "fontlos" ## owner name
-	admin: ["fontlos"] ## ['admin name']
-	id: uid
-	language: zh-CN
-	distractionFreeMode: true # 无干扰模式
-	recentComment: true
-	proxy: ""
+waline:
+  enable: true
+  recentComment: true
+  reaction: false
+  login: 'enable'
+  meta: ['nick', 'mail']
+  requiredMeta: ['nick', 'mail']
+  commentSorting: 'latest'
+  imageUploader: false
+  serverURL: 'comment.fontlos.com'
 
 # see http://ibruce.info/2015/04/04/busuanzi/
 busuanzi:
