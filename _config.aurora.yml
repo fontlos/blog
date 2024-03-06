@@ -74,7 +74,7 @@ gitalk:
 
 # see http://ibruce.info/2015/04/04/busuanzi/
 busuanzi:
-	enable: false
+	enable: true
 
 copy_protection:
 	enable: true
@@ -134,7 +134,7 @@ aurora_bot:
     # 这将在用户返回窗口时触发.
     visibility_change: 呀, 欢迎回来～
 
-    # 欢迎, 号码是一天中的时间.
+    # 欢迎, 数字是一天中的时间.
     welcome:
       '24': 你是夜猫子呀?这么晚还不睡觉, 明天起的来嘛?
       '5_7': 早上好! 一日之计在于晨, 美好的一天就要开始了.
