@@ -1,9 +1,10 @@
 ---
+feature: false
 title: {{ title }}
-abstracts:
 date: {{ date }}
+abstracts:
 tags:
 categories:
-cover:
-feature: false
+    - Note
+cover: https://fontlos.com/icons/logo.png
 ---

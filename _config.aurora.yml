@@ -2,7 +2,7 @@ site:
   subtitle: 芳塔洛斯
   author: 芳塔洛斯
   nick: Fontlos
-  description: 来人间一趟, 为散步一场<br />待走出岁月, 何样的彼方<br />才配得上这一路的颠沛与时光
+  description: 来人间一趟, 为散步一场
 	link: "/"
 	language: zh-CN
 	multi_language: true
@@ -74,7 +74,7 @@ busuanzi:
 	enable: true
 
 copy_protection:
-	enable: true
+	enable: false
 	author:
 		cn: 作者 芳塔洛斯
 		en: Author Fontlos
