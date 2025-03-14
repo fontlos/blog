@@ -54,9 +54,6 @@ socials:
 site_meta:
 	cdn: cn
 	favicon:
-	description: "Debug everything."
-	keywords: "Programming, Web, Frontend, Backend ,Rust, Blog, Aurora, Fontlos, 芳塔洛斯"
-	author: "Fontlos"
 
 waline:
   enable: true
