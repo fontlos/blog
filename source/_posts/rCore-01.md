@@ -16,9 +16,9 @@ cover: https://fontlos.com/icons/logo.png
 
 ## 系统环境
 
-为了避免不必要的环境错误, 我们在 Linux 上, 最好是 **Ubuntu** 发行版上进行开发, 对于 Windows, 可以使用 WSL2 进行, 注意必须是 WSL2, 因为 WSL1 本质上还是在进行 API 翻译, WSL2 才内置了一个真正的 Linux 内核. 至于如何安装可以查看 [往期文章](https://fontlos.com/post/2025-03-12), 只需要通过这个启用 WSL2 即可, 然后如果你不需要什么自定义选项, 在不安装任何发行版的情况下直接执行 `wsl` 命令就会自动安装一个 Ubuntu 发行版, 或者也可以前往微软应用商店安装
+为了避免不必要的环境错误, 我们在 Linux 上, 最好是 **Ubuntu** 发行版上进行开发, 对于 Windows, 可以使用 **WSL2** 进行, 注意必须是 WSL2, 因为 WSL1 本质上还是在进行 API 翻译, WSL2 才内置了一个真正的 Linux 内核. 至于如何安装可以查看 [往期文章](https://fontlos.com/post/2025-03-12), 只需要通过这个启用 WSL2 即可, 然后如果你不需要什么自定义选项, 在不安装任何发行版的情况下直接执行 `wsl` 命令就会自动安装一个 Ubuntu 发行版, 或者也可以前往微软应用商店安装
 
-对于 MacOS 或其他不想使用 WSL 的情况, 可以使用虚拟机或 Docker, Docker 相关文件已经在储存库对应分支根目录了
+对于 MacOS 或其他不想使用 WSL 的情况, 可以使用虚拟机或 **Docker**, Docker 相关文件已经在储存库对应分支根目录了
 
 ## Rust 环境
 
@@ -44,17 +44,9 @@ apt-get install qemu-system
 pacman -S qemu
 ```
 
-但是高版本和官方储存库的代码会有一些不兼容问题, 你需要下载最新版本的 [`bootloader/rustsbi-qemu.bin`](https://github.com/rustsbi/rustsbi-qemu/releases) 替换掉默认的. 后面开发时也有一些常量值需要修改
+但是高版本的 Qemu 需要下载最新版本的 [`bootloader/rustsbi-qemu.bin`](https://github.com/rustsbi/rustsbi-qemu/releases) 替换掉默认的. 后面开发时也有一些常量值需要修改, 这些到后面再说
 
-```rs
-// os/src/sbi.rs
-const SBI_SHUTDOWN: usize = 0x53525354;
-const SBI_SET_TIMER: usize = 0x54494D45;
-```
-
-这些到后面再说
-
-或者你也可以手动编译一份 7.0 版本, 对于 Ubuntu 来说
+或者你也可以手动编译一份 **7.0** 版本, 这时这个项目兼容性最好的版本, 对于 Ubuntu 来说
 
 ```sh
 # 安装编译所需的依赖包
@@ -62,8 +54,6 @@ sudo apt install autoconf automake autotools-dev curl libmpc-dev libmpfr-dev lib
     gawk build-essential bison flex texinfo gperf libtool patchutils bc \
     zlib1g-dev libexpat-dev pkg-config  libglib2.0-dev libpixman-1-dev git tmux python3
 # 下载源码包
-# 如果下载速度过慢可以使用我们提供的百度网盘链接：https://pan.baidu.com/s/1z-iWIPjxjxbdFS2Qf-NKxQ
-# 提取码 8woe
 wget https://download.qemu.org/qemu-7.0.0.tar.xz
 # 解压
 tar xvJf qemu-7.0.0.tar.xz
@@ -73,9 +63,7 @@ cd qemu-7.0.0
 make -j$(nproc)
 ```
 
-对于不同的系统可能有不同的需要安装的包, 按需安装即可, 提示缺什么可以查一查
-
-最后验证一下是否安装成功, 我们主要需要 RiscV 相关的工具
+对于不同的系统可能有不同的需要安装的包, 按需安装即可, 提示缺什么可以查一查. 最后验证一下是否安装成功, 我们主要需要 RiscV 相关的工具
 
 ```sh
 qemu-system-riscv64 --version
@@ -101,14 +89,14 @@ git checkout ch1
 
 不要忘了替换 `bootloader/rustsbi-qemu.bin` 文件
 
-尝试运行, 注意, 暂时不要尝试手动运行而不是用 Makefile, 这能帮你自动安装一些依赖
+尝试运行, 注意, 暂时 **不要尝试手动运行**, 而是像下面使用 Makefile, 这能帮你自动安装一些依赖, 例如工具链, 编译目标和二进制文件分析工具
 
 ```sh
 cd os
 LOG=DEBUG make run
 ```
 
-如果一切顺利, 将有以下输出
+如果一切顺利, 将有以下输出 (如果出了以外, 可以按 Ctrl-A, 然后按 X 退出 Qemu)
 
 ```
 [rustsbi] RustSBI version 0.4.0-alpha.1, adapting to RISC-V SBI v2.0.0
@@ -183,9 +171,9 @@ cargo run
 Hello, world!
 ```
 
-对于调试程序而言最常用的就是 `println!` 宏, 但即使是这么常用的简单的功能, 也不像表面上那么简单, 尤其是 Rust 的这个还是个宏而非函数, 表面三行代码下封装了许多细节, 宏会展开成函数调用, 其依赖于 Rust 标准库, 而标准库又依赖特定系统的系统调用, 系统调用取决于不同的系统和内核, 再往下依赖特定硬件的指令集, 层层抽象使得我们可以用少量的高级语言代码执行复杂的功能
+对于调试程序而言最常用的就是 `println!` 宏, 但即使是这么常用的简单的功能, 也不像表面上那么简单, 尤其是 Rust 的这个还是个 **宏** 而非函数, 表面三行代码下封装了许多细节, 宏会展开成函数调用, 其依赖于 Rust 标准库, 而标准库又依赖特定系统的系统调用, 系统调用取决于不同的系统和内核, 再往下依赖特定硬件的指令集, 层层抽象使得我们可以用少量的高级语言代码执行复杂的功能
 
-可以通过下面的命令简单的查看一下当前平台的目标三元组
+可以通过下面的命令简单的查看一下当前平台的 **目标三元组**
 
 ```sh
 rustc -V -v
@@ -200,14 +188,14 @@ release: 1.87.0-nightly
 LLVM version: 20.1.0
 ```
 
-其中 `host` 字段就是我们所需的信息, 从前到后表示我们的编译链接目标是一个 `x86_64` 指令集的 CPU, 生产厂商未知, 建立在 Linux 的 GNU 运行时上
+其中 `host` 字段就是我们所需的信息, 从前到后表示我们的编译链接目标是一个 `x86_64` 指令集的 CPU, 生产厂商未知(不包含于目标三元组中), 建立在 Linux 的 GNU 运行时上
 
 相应的, RiscV 的目标三元组是 `riscv64gc-unknown-none-elf`, 其中 `riscv64` 是指令集, 而后面的 `gc` 是指令集的扩展, 其中 `g` 是一个通用扩展, 包含了整数扩展 `i`, 乘除扩展 `m`, 原子扩展 `a`, 单双精度浮点扩展 `f` 和 `d`. `c` 对应了压缩扩展
 
 如果直接尝试将这个程序编译链接到 RiscV 上
 
 ```sh
-cargo run --target riscv64gc-unknown-none-elf
+cargo build --target riscv64gc-unknown-none-elf
 ```
 
 ```
@@ -230,15 +218,15 @@ For more information about this error, try `rustc --explain E0463`.
 error: could not compile `rcore` (bin "rcore") due to 3 previous errors
 ```
 
-很明显我们的裸机环境上显然没有标准库和系统调用这些功能, 不过除了标准库, Rust 还拥有一个核心库 Core, 它不依赖任何系统, 只包含 Rust 语言的核心功能, 所以要想运行我们的内核, 至少要移除对内核程序标准库的依赖且通过编译, 这通常被称为 `no_std` crate. 而且就像我们在上面说的, `println!` 宏在调试中相当常用, 因此下一步就是通过核心库和其他 `no_std` 库在用户态复活这个宏. (本质上我们就是在实现一个小的特定平台标准库)
+很明显我们的裸机环境上显然没有标准库和系统调用这些功能, 不过除了 **标准库 Std**, Rust 还拥有一个 **核心库 Core**, 它不依赖任何系统, 只包含 Rust 语言的核心功能, 所以要想运行我们的内核, 至少要移除对内核程序标准库的依赖且通过编译, 这通常被称为 `no_std` crate. 而且就像我们在上面说的, `println!` 宏在调试中相当常用, 因此下一步就是通过核心库和其他 `no_std` 库在用户态复活这个功能. (本质上我们就是在实现一个小的特定平台标准库)
 
 最后把程序移植到内核态, 构建在裸机上支持输出的最小运行时环境
 
-而为了加深理解这一过程, 在下面的内容我们将脱离 `rCore-Tutorial-Code-2024S` 这个框架, 自己动手开始实现这些功能
+而为了加深理解这一过程, 在下面的内容我们将脱离之前克隆的教程框架, 自己动手开始实现这些功能, 而你的实际操作应该跟随这个教程框架
 
 ## 移除标准库
 
-首先为了不在每次编译的时候加上 `target` 参数, 我们在当前项目根目录新建一个 `.cargo` 文件夹, 并在里面新建一个 `config.toml` 文件, 写入以下内容
+就直接在刚刚的 `rcore` crate 上修改. 首先为了不在每次编译的时候加上 `target` 参数, 我们在当前项目根目录新建一个 `.cargo` 文件夹, 并在里面新建一个 `config.toml` 文件, 写入以下内容
 
 ```toml
 [build]
@@ -247,9 +235,11 @@ target = "riscv64gc-unknown-none-elf"
 
 这会让 Cargo 使用 `riscv64gc-unknown-none-elf` 作为目标三元组编译当前项目, 在一个目标三元组主机上编译另一个目标三元组程序的行为称为 **交叉编译**
 
-然后在 `src/main.rs` 文件的第一行加上 `#![no_std]`, 这是一个 crate 级别的属性宏, 只能用在 `main.rs/lib.rs` 中, 告诉编译器这整个项目都不需要对标准库进行链接, 因此会改用核心库
+然后在 `src/main.rs` 文件的第一行加上 `#![no_std]`, 这是一个 **crate 级别的属性宏**, 只能用在 `main.rs/lib.rs` 中, 告诉编译器这整个项目都 **不需要对标准库进行链接**, 因此会改用核心库
 
-再次尝试运行, 这次只需要 `cargo run`
+> 如果你使用 rust-analyzer, 并且在移除标准库后出现了 `can't find crate for 'test'` 错误, 这并不会影响编译, 而是 rust-analyzer 在执行 `cargo check` 时隐式的传递了 `--all-targets` 标志, 而有些测试依赖标准库, 只需要在当前文件夹新建 `.vscode/settings.json`, 填入 `{ "rust-analyzer.check.allTargets": false }` 即可
+
+再次尝试编译, 这次只需要 `cargo build`
 
 ```
    Compiling rcore v0.1.0 (/root/Code/rcore)
@@ -278,7 +268,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 ```
 
-`!` 是一个特殊的返回类型, 它表示永不返回, `panic!` 宏的返回值就是它, 目前在我们实现的 `panic` 函数中什么都不做, 接受一个参数但忽略, 在函数体内只是无限循环, 现在在我们的代码编辑器上应该是没有飘红的报错了, 再次运行
+`!` 是一个特殊的返回类型, 它表示 **永不返回**, `panic!` 宏的返回值就是它, 目前在我们实现的 `panic` 函数中什么都不做, 接受一个参数但忽略, 在函数体内只是无限循环, 现在在我们的代码编辑器上应该是没有飘红的报错了, 再次尝试编译
 
 ```
 error: using `fn main` requires the standard library
@@ -288,9 +278,9 @@ error: using `fn main` requires the standard library
 error: could not compile `rcore` (bin "rcore") due to 1 previous error
 ```
 
-出现了新的错误, 它说使用 `main` 函数需要标准库, 但我们又知道, `main` 函数是程序的入口点, 怎么能没有 `main` 函数呢? 下面的提示帮助了我们, 可以使用 `#![no_main]` 绕过 Rust 生成的入口点并自己声明一个特定于平台的入口点, 并且这个函数通常会使用 `#[no_mangle]` 来标记, 默认情况下编译器会修改函数名使其包含更多信息方便编译器, 但这会让函数名变得不可读, 而这个属性宏的意思就是告诉编译器不要这么做, 保持原符号就好. 这是一个 **Unsafe** 属性宏, 因此如果你使用高版本 Rust, 需要写成 `#[unsafe(no_mangle)]`
+出现了新的错误, 它说使用 `main` 函数需要标准库, 但我们又知道, `main` 函数是程序的入口点, 怎么能没有 `main` 函数呢? 下面的提示帮助了我们, 可以使用 `#![no_main]` **绕过** Rust 生成的入口点并自己声明一个特定于平台的入口点, 并且这个函数通常会使用 `#[no_mangle]` 来标记, 默认情况下编译器会修改函数名使其包含更多信息方便编译器, 但这会让函数名变得不可读, 而这个属性宏的意思就是告诉编译器不要这么做, 保持原符号就好. 这是一个 **Unsafe** 属性宏, 因此如果你使用高版本 Rust, 需要写成 `#[unsafe(no_mangle)]`
 
-接下来在 `src/main.rs` 最上面也添加上 `#![no_main]`, 既然都绕过入口点了, 那 `main` 函数也没有存在的意义了, 暂时可以删掉
+接下来在 `src/main.rs` 最上面也添加上 `#![no_main]`, 既然都绕过入口点了, 那 `main` 函数也没有存在的意义了, 暂时可以删掉, 此时我们的 `main.rs` 只剩下了
 
 ```rs
 // src/main.rs
@@ -300,9 +290,7 @@ error: could not compile `rcore` (bin "rcore") due to 1 previous error
 mod lang_items;
 ```
 
-这时执行 `cargo build`, 没有错误, 至少我们的程序通过编译了
-
-接下来可以用一些工具来分析一下我们的构建产物
+再次编译, 没有错误, 至少我们的程序通过编译了, 但是尝试运行会失败, 所以让我们用一些工具来分析一下我们的构建产物
 
 ```sh
 # 文件格式
@@ -349,15 +337,11 @@ rust-objdump -S target/riscv64gc-unknown-none-elf/debug/rcore
 # target/riscv64gc-unknown-none-elf/debug/rcore:  file format elf64-littleriscv
 ```
 
-通过 `file` 工具可以看到, 它似乎确实是 RiscV64 可执行程序, 但 `rust-readobj` 显示它的入口地址 `Entry` 是 `0`, 这显然不是一个正常的地址, 并且使用 `rust-objdump` 尝试反汇编时, 没有生成任何汇编代码
-
-综上, 我们的可执行文件虽然格式合法, 但实际上是一个空程序, 原因是缺少了刚刚我们所说的编译器规定的入口函数 `_start`, 虽然绕过了它, 但我们没有提供一个新的
-
-虽然程序暂时无法执行, 但至少我们已经摆脱了对标准库的依赖
+通过 `file` 工具可以看到, 它似乎确实是 RiscV64 可执行程序, 但 `rust-readobj` 显示它的入口地址 `Entry` 是 `0`, 这显然不是一个正常的地址, 并且使用 `rust-objdump` 尝试反汇编时, 没有生成任何汇编代码, 这说明, 我们的可执行文件虽然格式合法, 但实际上是一个 **空程序**, 原因是缺少了刚刚我们所说的编译器规定的入口函数 `_start`, 虽然绕过了它, 但我们没有提供一个新的. 不过虽然程序暂时无法执行, 但至少我们已经摆脱了对标准库的依赖
 
 ## 让程序在用户态运行起来
 
-接下来让我们添加这个入口函数, 还记得编译器在之前的提示吗, 需要用一个属性宏来标记
+接下来让我们添加这个入口函数, 还记得编译器在之前的提示吗, 需要用一个属性宏来标记, 函数名暂时需要固定是这个, 因为普通 Rust 程序在调用 `main` 函数前都会调用一个名为 `_start` 的函数
 
 ```rs
 // src/main.rs
@@ -390,10 +374,10 @@ rust-objdump -S target/riscv64gc-unknown-none-elf/debug/rcore
 qemu-riscv64 target/riscv64gc-unknown-none-elf/debug/rcore
 ```
 
-目前我们的程序无法正常退出, 即使注释掉入口文件里的无限循环, 尝试编译运行也会触发一个段错误, 因此我们需要使用操作系统的 `exit` 系统调用
+目前我们的程序无法正常退出, 即使注释掉入口文件里的无限循环, 尝试编译运行也会触发一个段错误, 我们需要一个正常的退出机制, 即通过 `exit` 系统调用退出, 目前我们使用的 `qemu-riscv64` 命令会将我们的程序运行在用户态, 其中发生的系统调用都会被转译成宿主系统的系统调用
 
 ```rs
-// 在 RiscV 上用于表示 exit 的系统调用号
+// 表示 exit 的系统调用号
 const SYSCALL_EXIT: usize = 93;
 
 // 用于发起系统调用, 传入系统调用号和参数
@@ -401,7 +385,7 @@ fn syscall(id: usize, args: [usize; 3]) -> isize {
     let mut ret;
     unsafe {
         core::arch::asm!(
-            // 在 RiscV 中 ecall 指令用于触发系统调用, 从用户态切换到内核态
+            // 在 RiscV 中 ecall 指令用于触发系统调用
             "ecall",
             // 表示 x10 寄存器既是输入也是输出, 用于传递第一个参数, 并接收系统调用的返回值
             inlateout("x10") args[0] => ret,
@@ -443,3 +427,356 @@ echo $env.LAST_EXIT_CODE
 可以看到打印出了 10, 与我们传入的一样
 
 ## 复活打印输出功能
+
+就像我们之前说的, 调试程序最基本的方案就是使用 `println!` 宏, 下面我们就尝试使用核心库中的 `Write` trait 实现一个基本的 `println!`
+
+首先我们简单封装一下 `SYSCALL_WRITE` 的系统调用, 新建一个 `console` 模块
+
+```rs
+// src/console.rs
+
+// `write` 的系统调用号
+const SYSCALL_WRITE: usize = 64;
+
+pub fn sys_write(fd: usize, buffer: &[u8]) -> isize {
+    syscall(SYSCALL_WRITE, [fd, buffer.as_ptr() as usize, buffer.len()])
+}
+
+// 对一个空结构体实现我们的标准输出
+struct Stdout;
+// 这个 trait 只接受 Unicode 字符流
+use core::fmt::Write;
+
+impl Write for Stdout {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        // 文件描述符, 1 表示标准输出
+        sys_write(1, s.as_bytes());
+        Ok(())
+    }
+}
+
+// 格式化参数, 通常由 format_args! 宏生成
+pub fn print(args: core::fmt::Arguments) {
+    Stdout.write_fmt(args).unwrap();
+}
+
+// 这会将宏导出到当前 crate 根目录
+#[macro_export]
+macro_rules! print {
+    // fmt 是一个字符串字面量
+    // 后面表示可选的匹配多个参数, 类型是 token tree, 可以是任何语法结构
+    ($fmt: literal $(, $($arg: tt)+)?) => {
+        $crate::console::print(format_args!($fmt $(, $($arg)+)?));
+    }
+}
+
+#[macro_export]
+macro_rules! println {
+    ($fmt: literal $(, $($arg: tt)+)?) => {
+        // 拼接一个 \n
+        $crate::console::print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
+    }
+}
+```
+
+最后在调用 `exit` 系统调用前加上一行 `println!("Hello, world!")`
+
+编译运行
+
+```sh
+qemu-riscv64 target/riscv64gc-unknown-none-elf/debug/rcore
+# Hello, world!
+```
+
+我们成功在我们的内核世界里发出了第一道声音
+
+## 将程序移植到裸机环境
+
+就像之前说的, 我们的程序此时仍然依赖当前操作系统的系统调用, 现在我们来彻底摆脱这一点, 使用 `qemu-system-riscv64` 将程序运行在真正的内核态
+
+首先确保 [`bootloader/rustsbi-qemu.bin`](https://github.com/rustsbi/rustsbi-qemu/releases) 文件存在, 使用高版本 Qemu 需要在上面的链接中下载最新版
+
+然后我们整理一下之前的代码, 既然要摆脱系统调用了, 那么 `syscall` 这个函数也将没用了, 接下来我们将通过 `RustSBI` 调用真正的 RiscV 硬件功能, 所以我们将其改个名字叫 `sbicall`, 原来的退出函数也没用了, 然后我们将这些代码一起整理到 `sbi` 模块
+
+```rs
+// src/sbi.rs
+// 用于发起系统调用, 传入系统调用号和参数
+pub fn sbicall(id: usize, args: [usize; 3]) -> isize {
+    let mut ret;
+    unsafe {
+        core::arch::asm!(
+            // 将该寄存器重置为 0
+            "li x16, 0",
+            // 在 RiscV 中 ecall 指令用于触发系统调用, 从用户态切换到内核态
+            "ecall",
+            // 表示 x10 寄存器既是输入也是输出, 用于传递第一个参数, 并接收系统调用的返回值
+            inlateout("x10") args[0] => ret,
+            // 用于传递后两个参数
+            in("x11") args[1],
+            in("x12") args[2],
+            // 用于传递系统调用号, 执行时读取上面三个寄存器的参数
+            in("x17") id,
+        );
+    }
+    ret
+}
+
+// 低版本 qemu 用这个
+// const SBI_SHUTDOWN: usize = 8;
+// 高版本 qemu 用这个
+// ASCII 码表示 "SRST", 即 "Supervisor Reset"
+const SBI_SHUTDOWN: usize = 0x53525354;
+
+pub fn shutdown() -> ! {
+    sbicall(SBI_SHUTDOWN, [0, 0, 0]);
+    panic!("Shutdown!");
+}
+```
+
+同时原来基于系统调用的 `console` 模块暂时也不能用了, 我们先把它注释掉
+
+此时我们的 `main` 文件只剩下
+
+```rs
+#![no_std]
+#![no_main]
+
+mod lang_items;
+mod sbi;
+
+#[unsafe(no_mangle)]
+extern "C" fn _start() {
+    sbi::shutdown();
+}
+```
+
+然后尝试编译运行
+
+```sh
+cargo build --release
+
+# 把 ELF 可执行文件转成 binary 文件
+rust-objcopy --binary-architecture=riscv64 target/riscv64gc-unknown-none-elf/release/rcore --strip-all -O binary target/riscv64gc-unknown-none-elf/release/rcore.bin
+
+qemu-system-riscv64 -machine virt -nographic -bios ./bootloader/rustsbi-qemu.bin -device loader,file=target/riscv64gc-unknown-none-elf/release/rcore.bin,addr=0x80200000
+```
+
+最后一段命令将启动一个完整的虚拟机, 没有图形页面, 加载我们指定的 bootloader, 并在硬件指定内存地址中放入我们的内核程序. 启动后虚拟 CPU 会自动转跳到 RustSBI处, 完成硬件初始化后跳转到我们指定的内核地址处, 即 `0x80200000`
+
+这可以运行, 但程序会卡死, 并且风扇会开始狂转, 还记得之前提到的, 使用 `Ctrl+A` 后按 `X` 退出
+
+使用 `rust-readobj` 分析一下我们的可执行文件
+
+```
+rust-readobj -h target/riscv64gc-unknown-none-elf/release/rcore
+
+File: target/riscv64gc-unknown-none-elf/release/rcore
+Format: elf64-littleriscv
+Arch: riscv64
+AddressSize: 64bit
+LoadName: <Not found>
+ElfHeader {
+  Ident {
+    Magic: (7F 45 4C 46)
+    Class: 64-bit (0x2)
+    DataEncoding: LittleEndian (0x1)
+    FileVersion: 1
+    OS/ABI: SystemV (0x0)
+    ABIVersion: 0
+    Unused: (00 00 00 00 00 00 00)
+  }
+  Type: Executable (0x2)
+  Machine: EM_RISCV (0xF3)
+  Version: 1
+  Entry: 0x11210
+  ProgramHeaderOffset: 0x40
+  SectionHeaderOffset: 0xA9C0
+  Flags [ (0x5)
+    EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
+    EF_RISCV_RVC (0x1)
+  ]
+  HeaderSize: 64
+  ProgramHeaderEntrySize: 56
+  ProgramHeaderCount: 5
+  SectionHeaderEntrySize: 64
+  SectionHeaderCount: 9
+  StringTableSectionIndex: 7
+}
+```
+
+发现入口地址 `Entry` 字段的值与我们预期的不符, 不是 `0x80200000`, 这就要求我们自己设置程序的 **内存布局并设置栈**, 可以通过链接脚本和内联全局汇编做到这一点
+
+同样的, 为了避免每次编译都传入链接参数, 我们修改 `.cargo/config.toml` 文件, 添加以下内容
+
+```toml
+[target.riscv64gc-unknown-none-elf]
+rustflags = [
+    "-Clink-arg=-Tsrc/linker.ld", "-Cforce-frame-pointers=yes"
+]
+```
+
+我们将链接脚本路径设置在 `src/linker.ld`, 接下来我们创建这个文件并写入以下内容
+
+```ld
+OUTPUT_ARCH(riscv)
+ENTRY(_start)
+BASE_ADDRESS = 0x80200000;
+
+SECTIONS
+{
+    . = BASE_ADDRESS;
+    skernel = .;
+
+    stext = .;
+    .text : {
+        *(.text.entry)
+        *(.text .text.*)
+    }
+
+    . = ALIGN(4K);
+    etext = .;
+    srodata = .;
+    .rodata : {
+        *(.rodata .rodata.*)
+        *(.srodata .srodata.*)
+    }
+
+    . = ALIGN(4K);
+    erodata = .;
+    sdata = .;
+    .data : {
+        *(.data .data.*)
+        *(.sdata .sdata.*)
+    }
+
+    . = ALIGN(4K);
+    edata = .;
+    .bss : {
+        *(.bss.stack)
+        sbss = .;
+        *(.bss .bss.*)
+        *(.sbss .sbss.*)
+    }
+
+    . = ALIGN(4K);
+    ebss = .;
+    ekernel = .;
+
+    /DISCARD/ : {
+        *(.eh_frame)
+    }
+}
+```
+
+我们一部分一部分的看, 首先最顶上
+
+```ld
+OUTPUT_ARCH(riscv)
+ENTRY(_start)
+BASE_ADDRESS = 0x80200000;
+```
+
+第一行指定了目标架构, 第二行指定了入口符号, 它需要和你接下来的内联汇编中的入口符号相同. 第三行定义了一个变量, 这是我们内核程序的起始地址
+
+下面开始是段布局. 首先我们将当前地址计数器 `.` 初始化为内核程序的起始地址, 然后定义一个符号 `skernel`, 将起始地址赋值给它, 表示内核的起始地址
+
+```ld
+    stext = .;
+    .text : {
+        *(.text.entry)
+        *(.text .text.*)
+    }
+```
+
+然后定义 **代码段**. 首先获取代码段的起始地址, 将目标文件中的 `.text.entry` 放在最前面, 其他 `.text` 段和 `.text.*` 段合并到代码段中
+
+```ld
+    . = ALIGN(4K);
+    etext = .;
+    srodata = .;
+    .rodata : {
+        *(.rodata .rodata.*)
+        *(.srodata .srodata.*)
+    }
+```
+
+**只读数据段**, 首先将当前地址计数器对齐到 `4KB` 边界, 定义一个符号表示代码段的结束, 再定义一个符号表示只读数据段的开始
+
+下面用类似的方法定义了 **数据段**, **BSS** 段 (储存未初始化的全局和静态变量). 在最后定义了两个符号表示 BSS 段的结束和内核的结束地址, 然后丢弃了不需要的段
+
+然后我们创建一个汇编文件 `src/entry.asm` 用于初始化栈并跳转到实际的入口函数
+
+```asm
+    .section .text.entry
+    .globl _start
+_start:
+    la sp, boot_stack_top
+    call rust_main
+
+    .section .bss.stack
+    .globl boot_stack_lower_bound
+boot_stack_lower_bound:
+    .space 4096 * 16
+    .globl boot_stack_top
+boot_stack_top:
+```
+
+首先 `.section .text.entry` 将接下来的代码放入 `.text.entry` 段, 根据链接脚本, 它将会位于代码段的最前面
+
+然后声明了一个全局符号 `_start`, 这应该和你链接脚本中的入口符号相同
+
+然后在下面真正定义 `_start`, 首先将栈顶地址加载到栈指针寄存器 `sp` 中, 然后调用了一个叫做 `rust_main` 的函数, 这个函数应该与接下来我们在 Rust 代码中定义的入口函数名称相同
+
+然后 `.section .bss.stack` 将接下来的数据放入 `.bss.stack` 段, 根据链接脚本, 它会在 BSS 段的最前面
+
+首先声明并定义栈底符号, 分配 `4096 * 16` 字节即 `64KB` 的空间作为栈, 然后声明并定义栈顶符号, 由于栈是从高到低的, 所以栈顶是栈的起始地址
+
+最后修改我们的 `main.rs` 文件
+
+```rs
+#![no_std]
+#![no_main]
+
+mod lang_items;
+mod sbi;
+
+core::arch::global_asm!(include_str!("entry.asm"));
+
+// 这个函数名字应和汇编中定义的相同
+#[unsafe(no_mangle)]
+pub fn rust_main() -> ! {
+    sbi::shutdown();
+}
+```
+
+再次尝试编译执行
+
+```sh
+cargo build --release
+rust-objcopy --binary-architecture=riscv64 target/riscv64gc-unknown-none-elf/release/rcore --strip-all -O binary target/riscv64gc-unknown-none-elf/release/rcore.bin
+qemu-system-riscv64 -machine virt -nographic -bios ./bootloader/rustsbi-qemu.bin -device loader,file=target/riscv64gc-unknown-none-elf/release/rcore.bin,addr=0x80200000
+```
+
+不出意外的话, 我们的程序将正常退出
+
+```
+[rustsbi] RustSBI version 0.4.0-alpha.1, adapting to RISC-V SBI v2.0.0
+.______       __    __      _______.___________.  _______..______   __
+|   _  \     |  |  |  |    /       |           | /       ||   _  \ |  |
+|  |_)  |    |  |  |  |   |   (----`---|  |----`|   (----`|  |_)  ||  |
+|      /     |  |  |  |    \   \       |  |      \   \    |   _  < |  |
+|  |\  \----.|  `--'  |.----)   |      |  |  .----)   |   |  |_)  ||  |
+| _| `._____| \______/ |_______/       |__|  |_______/    |______/ |__|
+[rustsbi] Implementation     : RustSBI-QEMU Version 0.2.0-alpha.3
+[rustsbi] Platform Name      : riscv-virtio,qemu
+[rustsbi] Platform SMP       : 1
+[rustsbi] Platform Memory    : 0x80000000..0x88000000
+[rustsbi] Boot HART          : 0
+[rustsbi] Device Tree Region : 0x87e00000..0x87e012c4
+[rustsbi] Firmware Address   : 0x80000000
+[rustsbi] Supervisor Address : 0x80200000
+[rustsbi] pmp01: 0x00000000..0x80000000 (-wr)
+[rustsbi] pmp02: 0x80000000..0x80200000 (---)
+[rustsbi] pmp03: 0x80200000..0x88000000 (xwr)
+[rustsbi] pmp04: 0x88000000..0x00000000 (-wr)
+```
