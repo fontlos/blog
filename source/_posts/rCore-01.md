@@ -1,6 +1,6 @@
 ---
 feature: false
-title: rCore 学习笔记(1)|从裸机程序开始
+title: rCore 之旅(1)|从裸机程序开始
 date: 2025-03-17 12:00:00
 abstracts: rCore 系列课程的学习笔记, 在第一章将从环境配置开始, 移除标准库, 构建一个能运行在 Qemu 模拟器的裸机程序
 tags:
@@ -780,3 +780,171 @@ qemu-system-riscv64 -machine virt -nographic -bios ./bootloader/rustsbi-qemu.bin
 [rustsbi] pmp03: 0x80200000..0x88000000 (xwr)
 [rustsbi] pmp04: 0x88000000..0x00000000 (-wr)
 ```
+
+最后, 还有一个步骤, 根据 Rust 等编程语言约定的规范, 未初始化的全局变量和静态变量, 即 BSS 段默认为 0, 所以为了避免这些地方还留有其他脏数据, 我们需要手动清理掉, 只要是涉及到直接操作底层内存的事情都很重要. 通过链接脚本中我们设置的符号可以很方便的定位到这一段在内存中的位置, 简单添加以下内容
+
+```rs
+fn clean_bss() {
+    unsafe extern "C" {
+        // 这两个符号我们定义在了链接脚本中
+        fn sbss();
+        fn ebss();
+        }
+    // 直接强制将这片区域写入 0, 其中 write_volatile 方法是一个原子操作, 不会被编译器优化掉
+    (sbss as usize..ebss as usize).for_each(|a| {
+        unsafe { (a as *mut u8).write_volatile(0) }
+    });
+}
+
+#[unsafe(no_mangle)]
+pub fn rust_main() -> ! {
+    clean_bss();
+    sbi::shutdown();
+}
+```
+
+只不过到现在, 我们的 `println!` 宏失去系统调用后又坏掉了, 现在让我们借助 RustSBI 修复它
+
+首先封装一个我们自己的显示字符的系统调用
+
+```rs
+// src/sbi.rs
+const SBI_CONSOLE_PUTCHAR: usize = 1;
+
+pub fn console_putchar(c: usize) {
+    sbicall(SBI_CONSOLE_PUTCHAR, [c, 0, 0]);
+}
+```
+
+这个函数的作用是借助 SBI 打印一个 ASCII 字符, 然后回到 `console.rs` 文件
+
+```rs
+// 我们不需要原来的系统调用函数了, 重新实现 Write trait
+
+impl Write for Stdout {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        for c in s.chars() {
+            crate::sbi::console_putchar(c as usize);
+        }
+        Ok(())
+    }
+}
+```
+
+这样这两个宏就再次恢复功能了. 同时为了以后调试方便, 我们给 `panic` 处理函数添加更多信息
+
+```rs
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    if let Some(location) = info.location() {
+        crate::println!(
+            "[kernel] Panicked at {}:{} {}",
+            location.file(),
+            location.line(),
+            info.message()
+        );
+    } else {
+        crate::println!("[kernel] Panicked: {}", info.message());
+    }
+    crate::sbi::shutdown()
+}
+```
+
+对于低版本 Rust 需要额外启用 `#![feature(panic_info_message)]`, 并且 `message()` 函数返回的是 `Result`, 需要额外处理
+
+最后, 如果你愿意, 也可以实现一个简单的日志功能, 通过 `cargo add log` 添加 Rust 的日志门面库, 即这个库只定义了接口, 而没有实现具体功能, 需要我们手动实现一下
+
+```rs
+use log::{Level, LevelFilter, Log, Metadata, Record};
+
+struct SimpleLogger;
+
+impl Log for SimpleLogger {
+    fn enabled(&self, _metadata: &Metadata) -> bool {
+        true
+    }
+    fn log(&self, record: &Record) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+        let color = match record.level() {
+            Level::Error => 31, // 红色
+            Level::Warn => 93,  // 亮黄
+            Level::Info => 34,  // 蓝色
+            Level::Debug => 32, // 绿色
+            Level::Trace => 90, // 灰色
+        };
+        crate::println!(
+            "\u{1B}[{}m[{:>5}] {}\u{1B}[0m",
+            color,
+            record.level(),
+            record.args(),
+        );
+    }
+    fn flush(&self) {}
+}
+
+pub fn init() {
+    static LOGGER: SimpleLogger = SimpleLogger;
+    log::set_logger(&LOGGER).unwrap();
+    log::set_max_level(match option_env!("LOG") {
+        Some("ERROR") => LevelFilter::Error,
+        Some("WARN") => LevelFilter::Warn,
+        Some("INFO") => LevelFilter::Info,
+        Some("DEBUG") => LevelFilter::Debug,
+        Some("TRACE") => LevelFilter::Trace,
+        _ => LevelFilter::Off,
+    });
+}
+
+pub fn log_info() {
+    use log::*;
+    unsafe extern "C" {
+        fn stext();
+        fn etext();
+        fn srodata();
+        fn erodata();
+        fn sdata();
+        fn edata();
+        fn sbss();
+        fn ebss();
+        fn boot_stack_lower_bound();
+        fn boot_stack_top();
+    }
+    init();
+    crate::println!("[kernel] Hello, world!");
+    trace!(
+        "[kernel] .text [{:#x}, {:#x})",
+        stext as usize, etext as usize
+    );
+    debug!(
+        "[kernel] .rodata [{:#x}, {:#x})",
+        srodata as usize, erodata as usize
+    );
+    info!(
+        "[kernel] .data [{:#x}, {:#x})",
+        sdata as usize, edata as usize
+    );
+    warn!(
+        "[kernel] boot_stack top=bottom={:#x}, lower_bound={:#x}",
+        boot_stack_top as usize, boot_stack_lower_bound as usize
+    );
+    error!("[kernel] .bss [{:#x}, {:#x})", sbss as usize, ebss as usize);
+}
+```
+
+这部分代码并不难理解, 其中更改颜色的部分 `\u{1B}[{}m[{:>5}] {}\u{1B}[0m` 使用了 **ANSI 转义序列**, 首先使用 `\u{1B}[{}m` 定义颜色, 然后打印日志类型和日志信息, 最后使用 `\u{1B}[0m` 将颜色重置为默认
+
+我们在入口函数清理 BSS 段的下面加上这个 `log_info` 函数
+
+在环境变量中设置日志等级, 比如我使用的 nushell
+
+```sh
+$env.LOG = "TRACE"
+```
+
+然后重新编译运行, 你应该能看到和最开始我们用于测试环境的代码相同的输出
+
+至此, 我们就完成了一个可以运行在裸机上的简易程序
