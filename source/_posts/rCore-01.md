@@ -74,16 +74,16 @@ qemu-system-riscv64 --version
 首先克隆源码
 
 ```sh
-git clone https://github.com/LearningOS/rCore-Tutorial-Code-2024S
-cd rCore-Tutorial-Code-2024S
+git clone https://github.com/LearningOS/rCore-Tutorial-Code-2025S
+cd rCore-Tutorial-Code-2025S
 git checkout ch1
 ```
 
-这份源码比较旧了, 如果你使用高版本 Qemu, 我们需要做一些修改(也可以克隆我的 [fork](https://github.com/fontlos/rCore-Tutorial))
+这份源码比较旧了, 虽然时间是新的但是似乎没有更新过编译器版本, 并且是针对 7.0 版 Qemu 的, 如果你使用高版本 Qemu, 我们需要做一些修改(也可以克隆我的 [fork](https://github.com/fontlos/rCore-Tutorial))
 
-首先修改 `rust-toolchain.toml` 文件, 修改 `nightly` 后面的日期, 例如 `2025-03-16`, 因为部分特性在新版本 Rust 已经稳定
+如果你想顺带使用新版 Rust, 可以修改 `rust-toolchain.toml` 文件中 `nightly` 后面的日期, 可以直接去掉, 也可以加上一段比较新的版本, 例如 `2025-03-16`, 因为部分特性在新版本 Rust 已经稳定
 
-移除 `os/src/main.rs` 的 `#![feature(panic_info_message)]`, 这个特性已经稳定
+移除 `os/src/main.rs` 的 `#![feature(panic_info_message)]`, 这个特性在新版本已经稳定
 
 移除 `os/src/lang_items.rs` 中 `info.message()` 后面的 `unwrap()` 方法
 
@@ -278,7 +278,7 @@ error: using `fn main` requires the standard library
 error: could not compile `rcore` (bin "rcore") due to 1 previous error
 ```
 
-出现了新的错误, 它说使用 `main` 函数需要标准库, 但我们又知道, `main` 函数是程序的入口点, 怎么能没有 `main` 函数呢? 下面的提示帮助了我们, 可以使用 `#![no_main]` **绕过** Rust 生成的入口点并自己声明一个特定于平台的入口点, 并且这个函数通常会使用 `#[no_mangle]` 来标记, 默认情况下编译器会修改函数名使其包含更多信息方便编译器, 但这会让函数名变得不可读, 而这个属性宏的意思就是告诉编译器不要这么做, 保持原符号就好. 这是一个 **Unsafe** 属性宏, 因此如果你使用高版本 Rust, 需要写成 `#[unsafe(no_mangle)]`
+出现了新的错误, 它说使用 `main` 函数需要标准库, 但我们又知道, `main` 函数是程序的入口点, 怎么能没有 `main` 函数呢? 下面的提示帮助了我们, 可以使用 `#![no_main]` **绕过** Rust 生成的入口点并自己声明一个特定于平台的入口点, 并且这个函数通常会使用 `#[no_mangle]` 来标记, 默认情况下编译器会修改函数名使其包含更多信息方便编译器, 但这会让函数名变得不可读, 而这个属性宏的意思就是告诉编译器不要这么做, 保持原符号就好. 这是一个 **Unsafe** 属性宏, 在 Rust **2024 Edition** 对 Unsafe 内容增加了更严格的管控, 因此如果你使用高版本 Rust, 需要写成 `#[unsafe(no_mangle)]`
 
 接下来在 `src/main.rs` 最上面也添加上 `#![no_main]`, 既然都绕过入口点了, 那 `main` 函数也没有存在的意义了, 暂时可以删掉, 此时我们的 `main.rs` 只剩下了
 
@@ -618,29 +618,41 @@ rustflags = [
 我们将链接脚本路径设置在 `src/linker.ld`, 接下来我们创建这个文件并写入以下内容
 
 ```ld
+/* 指定架构 */
 OUTPUT_ARCH(riscv)
+/* 指定入口符号, 需要和稍后汇编中的入口符号相同 */
 ENTRY(_start)
+/* 定义一个变量, 内核程序起始地址 */
 BASE_ADDRESS = 0x80200000;
 
+/* 开始段布局 */
 SECTIONS
 {
+    /* 首先将当前地址计数器设置为内核起始地址 */
     . = BASE_ADDRESS;
+    /* 定义一个符号, 表示内核起始地址, 方便我们后续在 Rust 代码中调用 */
     skernel = .;
 
+    /* 代码段布局, 首先定义一个符号表示开始 */
     stext = .;
     .text : {
+        /* 将 .text.entry 放在最前面 */
         *(.text.entry)
         *(.text .text.*)
     }
 
+    /* 对齐到 4KB */
     . = ALIGN(4K);
+    /* 定义一个符号表示代码段结束 */
     etext = .;
+    /* 只读数据段布局 */
     srodata = .;
     .rodata : {
         *(.rodata .rodata.*)
         *(.srodata .srodata.*)
     }
 
+    /* 数据段布局 */
     . = ALIGN(4K);
     erodata = .;
     sdata = .;
@@ -649,6 +661,7 @@ SECTIONS
         *(.sdata .sdata.*)
     }
 
+    /* BSS 段布局 */
     . = ALIGN(4K);
     edata = .;
     .bss : {
@@ -660,8 +673,10 @@ SECTIONS
 
     . = ALIGN(4K);
     ebss = .;
+    /* 定义一个符号表示内核结束 */
     ekernel = .;
 
+    /* 丢弃了这些不需要的段 */
     /DISCARD/ : {
         *(.eh_frame)
     }
@@ -678,7 +693,7 @@ BASE_ADDRESS = 0x80200000;
 
 第一行指定了目标架构, 第二行指定了入口符号, 它需要和你接下来的内联汇编中的入口符号相同. 第三行定义了一个变量, 这是我们内核程序的起始地址
 
-下面开始是段布局. 首先我们将当前地址计数器 `.` 初始化为内核程序的起始地址, 然后定义一个符号 `skernel`, 将起始地址赋值给它, 表示内核的起始地址
+下面开始是段布局. 首先我们将当前地址计数器 `.` 初始化为内核程序的起始地址, 然后定义一个符号 `skernel`, 将起始地址赋值给它, 表示内核的起始地址, 这些符号会方便我们后续在 Rust 代码中获得它们
 
 ```ld
     stext = .;
@@ -902,6 +917,7 @@ pub fn init() {
 pub fn log_info() {
     use log::*;
     unsafe extern "C" {
+        // 这些符号我们都在链接脚本和汇编中定义了
         fn stext();
         fn etext();
         fn srodata();
