@@ -887,7 +887,146 @@ pub struct TrapContext {
 
 其他 CSR 交给硬件自行更新
 
-实现给用户态使用的系统调用
+## 中断管理
+
+在批处理操作系统初始化时, 我们需要修改 stvec 寄存器来指向正确的 Trap 处理入口点
+
+```rs
+// src/trap/mod.rs
+mod context;
+pub use context::TrapContext;
+
+use crate::*;
+use riscv::register::{
+    mtvec::TrapMode,
+    scause::{self, Exception, Trap},
+    stval, stvec,
+};
+
+core::arch::global_asm!(include_str!("trap.S"));
+
+pub fn init() {
+    unsafe extern "C" {
+        fn __alltraps();
+    }
+    unsafe {
+        stvec::write(__alltraps as usize, TrapMode::Direct);
+    }
+}
+```
+
+```S
+# src/trap/trap.S
+
+# 启用宏功能
+.altmacro
+# 定义两个宏, 将通用寄存器 x\n 的值保存到栈上, 从站上加载值到通用寄存器
+.macro SAVE_GP n
+    sd x\n, \n*8(sp)
+.endm
+.macro LOAD_GP n
+    ld x\n, \n*8(sp)
+.endm
+    .section .text
+    .globl __alltraps
+    .globl __restore
+    .align 2
+__alltraps:
+    # 将用户栈指针保存在 sscratch, 将内核栈指针加载到 sp, 原子指令不会被打断
+    csrrw sp, sscratch, sp
+    # 在内核栈上分配空间保存中断上下文
+    addi sp, sp, -34*8
+    # 保存通用寄存器的值, 跳过 x0
+    sd x1, 1*8(sp)
+    # 跳过 x2, 因为我们最开始交换内核和用户态栈指针后它现在指向内核栈
+    sd x3, 3*8(sp)
+    # 跳过 x4, 使用宏保存剩下的寄存器
+    .set n, 5
+    .rept 27
+        SAVE_GP %n
+        .set n, n+1
+    .endr
+    # 保存两个关键 CSR, 这里使用了临时寄存器 x5, x6, 即 t0, t1
+    # 它们已经被保存了所以现在覆盖也没事
+    csrr t0, sstatus
+    csrr t1, sepc
+    sd t0, 32*8(sp)
+    sd t1, 33*8(sp)
+    # 将用户栈指针读到 x7 保存在内核栈
+    csrr t2, sscratch
+    sd t2, 2*8(sp)
+    # 将内核栈指针 sp 存在 a0 作为参数调用待会的 trap_handler(cx: &mut TrapContext)
+    # 需要上下文是为了防止发生系统调用时的一些关键参数已被修改, 所以取内核栈上找保存的值
+    mv a0, sp
+    call trap_handler
+
+__restore:
+    # 将 x10 即 a0 内核栈指针加载到 sp
+    mv sp, a0
+    # 先恢复 sstatus, sepc, sscratch 的值, 因为它们使用了 x5-x7
+    # 防止后续被覆盖
+    ld t0, 32*8(sp)
+    ld t1, 33*8(sp)
+    ld t2, 2*8(sp)
+    csrw sstatus, t0
+    csrw sepc, t1
+    csrw sscratch, t2
+    # 恢复通用寄存器的值, 除了 sp, tp
+    ld x1, 1*8(sp)
+    ld x3, 3*8(sp)
+    .set n, 5
+    .rept 27
+        LOAD_GP %n
+        .set n, n+1
+    .endr
+    # 释放内核栈上的 TrapContext
+    addi sp, sp, 34*8
+    # 将用户栈指针加载到 sp, 内核栈指针保存到 sscratch
+    csrrw sp, sscratch, sp
+    # 返回到用户态
+    sret
+```
+
+然后我们在 Rust 中实现这个中断处理函数
+
+```rs
+#[unsafe(no_mangle)]
+/// 处理来自用户的中断, 异常, 或系统调用
+pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
+    let scause = scause::read(); // 获取 trap 的原因
+    let stval = stval::read(); // 获取额外信息
+    match scause.cause() {
+        // 系统调用
+        Trap::Exception(Exception::UserEnvCall) => {
+            // 更新 sepc 指向下一条指令, 以便中断返回后可以继续执行
+            cx.sepc += 4;
+            // a0 传参寄存器, 执行系统调用, a7 是系统调用号, 剩下的是参数
+            cx.x[10] = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]) as usize;
+        }
+        // 储存页错误, 尝试访问非法地址, 杀掉应用并运行下一个
+        Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
+            println!("[kernel] PageFault in application, kernel killed it.");
+            run_next_app();
+        }
+        // 尝试使用非法指令, 杀掉应用并运行下一个
+        Trap::Exception(Exception::IllegalInstruction) => {
+            println!("[kernel] IllegalInstruction in application, kernel killed it.");
+            run_next_app();
+        }
+        // 未知中断
+        _ => {
+            panic!(
+                "Unsupported trap {:?}, stval = {:#x}!",
+                scause.cause(),
+                stval
+            );
+        }
+    }
+    cx
+}
+```
+
+接下来我们实现这些系统调用
 
 ```rs
 // src/syscall/mod.rs
@@ -905,6 +1044,7 @@ mod process;
 use fs::*;
 use process::*;
 
+// 实际的系统调用不由这个执行, 只负责分配, 执行关键步骤在 trap_handler 中
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
@@ -918,10 +1058,12 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
 const FD_STDOUT: usize = 1;
 
 /// 将长度为 'len' 的 buf 写入文件描述符为 'fd' 的文件中
+/// buf 为来自用户程序的缓冲区指针
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     log::trace!("kernel: sys_write");
     match fd {
         FD_STDOUT => {
+            // 这里我们没有检查指针以及指向的内容的合法性直接转换, 存在安全隐患
             let slice = unsafe { core::slice::from_raw_parts(buf, len) };
             let str = core::str::from_utf8(slice).unwrap();
             crate::print!("{}", str);
@@ -937,9 +1079,77 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 
 use crate::batch::run_next_app;
 
-/// 任务退出并返回退出码
+/// 任务退出并返回退出码, 一个应用退出就尝试执行下一个
 pub fn sys_exit(exit_code: i32) -> ! {
     log::trace!("[kernel] Application exited with code {}", exit_code);
     run_next_app()
 }
 ```
+
+## 执行程序
+
+一切准备工作已经就绪, 是时候实现执行用户态程序的 `run_next_app` 了
+
+在之前的汇编中, 我们已经完成了执行用户态程序的主体过程, 但还差一些前置准备
+
+- 转跳到应用程序入口地址
+- 切换到用户栈
+- 为之前汇编中的 `__alltraps` 确保此时 `sscratch` 指向内核栈
+- 从监管态切换到用户态
+
+那么这个过程看起来很像在之前的汇编中执行完系统调用后恢复上下文返回到用户态的过程, 因此我们可以复用这一部分, 首先构造一个特殊的中断上下文环境
+
+```rs
+// src/trap/context.rs
+
+impl TrapContext {
+    pub fn set_sp(&mut self, sp: usize) {
+        self.x[2] = sp;
+    }
+    /// 初始化应用上下文环境
+    pub fn app_init_context(entry: usize, sp: usize) -> Self {
+        let mut sstatus = sstatus::read();
+        // 表示 Trap 返回时将切换到用户态
+        sstatus.set_spp(SPP::User);
+        let mut cx = Self {
+            // 初始化寄存器
+            x: [0; 32],
+            sstatus,
+            sepc: entry, // 设为应用入口点
+        };
+        cx.set_sp(sp); // 将用户栈指针保存在 sp (x2) 寄存器
+        cx // 返回应用的初始 Trap Context
+    }
+}
+
+// src/batch.rs
+
+pub fn run_next_app() -> ! {
+    // 首先获取应用管理器独占访问权并加载程序
+    let mut app_manager = APP_MANAGER.exclusive_access();
+    let current_app = app_manager.get_current_app();
+    unsafe {
+        app_manager.load_app(current_app);
+    }
+    // 更新当前应用程序索引
+    app_manager.move_to_next_app();
+    // 释放独占访问权
+    drop(app_manager);
+
+    // 复用这段汇编
+    unsafe extern "C" {
+        fn __restore(cx_addr: usize);
+    }
+
+    // 直接给内核栈压入这个特殊的中断状态, 使得在返回时切换到用户态, 从无到有的恢复应用执行环境
+    unsafe {
+        __restore(KERNEL_STACK.push_context(TrapContext::app_init_context(
+            APP_BASE_ADDRESS,
+            USER_STACK.get_sp(),
+        )) as *const _ as usize);
+    }
+    panic!("Unreachable in batch::run_current_app!");
+}
+```
+
+`app_init_context` 返回的就是内核栈的栈顶, 也就是这个上下文环境作为 `__restore` 的参数, 这也解释了为什么 `__restore` 一开始时要将 `a0` 加载到 `sp` 上, 因为 `a0` 是函数调用第一参数, 而 `__restore` 需要 `sp` 指向内核栈栈顶来完成后续操作
