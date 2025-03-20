@@ -1153,3 +1153,67 @@ pub fn run_next_app() -> ! {
 ```
 
 `app_init_context` 返回的就是内核栈的栈顶, 也就是这个上下文环境作为 `__restore` 的参数, 这也解释了为什么 `__restore` 一开始时要将 `a0` 加载到 `sp` 上, 因为 `a0` 是函数调用第一参数, 而 `__restore` 需要 `sp` 指向内核栈栈顶来完成后续操作
+
+最后运行一下
+
+```
+[rustsbi] RustSBI version 0.4.0-alpha.1, adapting to RISC-V SBI v2.0.0
+.______       __    __      _______.___________.  _______..______   __
+|   _  \     |  |  |  |    /       |           | /       ||   _  \ |  |
+|  |_)  |    |  |  |  |   |   (----`---|  |----`|   (----`|  |_)  ||  |
+|      /     |  |  |  |    \   \       |  |      \   \    |   _  < |  |
+|  |\  \----.|  `--'  |.----)   |      |  |  .----)   |   |  |_)  ||  |
+| _| `._____| \______/ |_______/       |__|  |_______/    |______/ |__|
+[rustsbi] Implementation     : RustSBI-QEMU Version 0.2.0-alpha.3
+[rustsbi] Platform Name      : riscv-virtio,qemu
+[rustsbi] Platform SMP       : 1
+[rustsbi] Platform Memory    : 0x80000000..0x88000000
+[rustsbi] Boot HART          : 0
+[rustsbi] Device Tree Region : 0x87e00000..0x87e012c4
+[rustsbi] Firmware Address   : 0x80000000
+[rustsbi] Supervisor Address : 0x80200000
+[rustsbi] pmp01: 0x00000000..0x80000000 (-wr)
+[rustsbi] pmp02: 0x80000000..0x80200000 (---)
+[rustsbi] pmp03: 0x80200000..0x88000000 (xwr)
+[rustsbi] pmp04: 0x88000000..0x00000000 (-wr)
+[kernel] Hello, world!
+[TRACE] [kernel] .text [0x80200000, 0x80204000)
+[DEBUG] [kernel] .rodata [0x80204000, 0x8020a000)
+[ INFO] [kernel] .data [0x8020a000, 0x80215000)
+[ WARN] [kernel] boot_stack top=bottom=0x80225000, lower_bound=0x80215000
+[ERROR] [kernel] .bss [0x80225000, 0x80226000)
+[kernel] num_app = 3
+[kernel] app_0 [0x8020a028, 0x8020d9a2)
+[kernel] app_1 [0x8020d9a2, 0x8021133c)
+[kernel] app_2 [0x8021133c, 0x80214d6e)
+[kernel] Loading app_0
+Hello, world from user mode program!
+[TRACE] [kernel] Application exited with code 0
+[kernel] Loading app_1
+[kernel] PageFault in application, kernel killed it.
+[kernel] Loading app_2
+power_3 [10000/200000]
+power_3 [20000/200000]
+power_3 [30000/200000]
+power_3 [40000/200000]
+power_3 [50000/200000]
+power_3 [60000/200000]
+power_3 [70000/200000]
+power_3 [80000/200000]
+power_3 [90000/200000]
+power_3 [100000/200000]
+power_3 [110000/200000]
+power_3 [120000/200000]
+power_3 [130000/200000]
+power_3 [140000/200000]
+power_3 [150000/200000]
+power_3 [160000/200000]
+power_3 [170000/200000]
+power_3 [180000/200000]
+power_3 [190000/200000]
+power_3 [200000/200000]
+3^200000 = 871008973(MOD 998244353)
+Test power_3 OK!
+[TRACE] [kernel] Application exited with code 0
+All applications completed!
+```
