@@ -26,7 +26,7 @@ Rust 依赖 C 的链接器等组件, 所以电脑上至少要存在一个 C/C++ 
 
 ### Windows
 
-### 安装VisualStudio
+#### 安装VisualStudio
 
 可以在 **单个组件** 选择只安装需要的组件, 关键词如下
 - MSVC C/C++ 生成工具
@@ -39,7 +39,7 @@ Rust 依赖 C 的链接器等组件, 所以电脑上至少要存在一个 C/C++ 
 
 ### Mac & Linux
 
-- Mac 需要安装 Xcode
+- Mac 需要安装 Xcode 和 GCC(实际已经是 Clang)
 ```sh
 xcode-select --install
 # 如果已安装则会显示已安装
@@ -73,6 +73,7 @@ export RUSTUP_DIST_SERVER=https://rsproxy.cn
 如果不想安装在 C 盘的话需要提前配置两个系统变量
 
 再在系统变量中加入以下两条, 下面为示例
+
 ```sh
 RUSTUP_HOME
 D:/Rust/rustup
@@ -80,11 +81,13 @@ D:/Rust/rustup
 CARGO_HOME
 D:/Rust/cargo
 ```
-在官网 [Rust-lang](https://www.rust-lang.org/zh-CN) 下载 rustup-init.exe并运行
+
+在官网 [Rust-lang](https://www.rust-lang.org/zh-CN) 下载 `rustup-init.exe` 并运行
 
 ### Mac & Linux
 
 直接在终端执行
+
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
@@ -93,7 +96,54 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ### 安装选项
 
-运行安装程序后, 终端会输出 `Current installtion options`
+以 Linux 为例, 运行安装程序后, 终端会输出 `Current installtion options`
+
+```
+Welcome to Rust!
+
+This will download and install the official compiler for the Rust
+programming language, and its package manager, Cargo.
+
+Rustup metadata and toolchains will be installed into the Rustup
+home directory, located at:
+
+  /root/.rustup
+
+This can be modified with the RUSTUP_HOME environment variable.
+
+The Cargo home directory is located at:
+
+  /root/.cargo
+
+This can be modified with the CARGO_HOME environment variable.
+
+The cargo, rustc, rustup and other commands will be added to
+Cargo's bin directory, located at:
+
+  /root/.cargo/bin
+
+This path will then be added to your PATH environment variable by
+modifying the profile files located at:
+
+  /root/.profile
+  /root/.config/nushell/env.nu
+  /root/.config/nushell/config.nu
+
+You can uninstall at any time with rustup self uninstall and
+these changes will be reverted.
+
+Current installation options:
+
+
+   default host triple: x86_64-unknown-linux-gnu
+     default toolchain: stable (default)
+               profile: default
+  modify PATH variable: yes
+
+1) Proceed with standard installation (default - just press enter)
+2) Customize installation
+3) Cancel installation
+```
 
 - 输入 `1` 执行安装
 - 输入 `2` 进行自定义选项
@@ -121,10 +171,6 @@ r = "run"
 # 需要安装 sscache 并配置 SCCACHE_DIR
 rustc-wrapper = "sccache"
 
-[target.x86_64-pc-windows-msvc]
-# Windows 上比 link 更快的链接器
-linker = 'rust-lld.exe'
-
 # 替换默认 crate 源
 [source.crates-io]
 replace-with = 'rsproxy-sparse'
@@ -137,13 +183,11 @@ registry = "https://rsproxy.cn/crates.io-index"
 [source.rsproxy-sparse]
 registry = "sparse+https://rsproxy.cn/index/"
 
-[registries.rsproxy]
-index = "https://rsproxy.cn/crates.io-index"
-
 # 使用系统自带的 git-cli 加速检索
 [net]
 git-fetch-with-cli = true
 
+# 在 Windows 上防止一些 SSL 连接错误
 [http]
 check-revoke = false
 ```
@@ -161,12 +205,12 @@ cargo -V
 
 这里推荐[VSCode](https://code.visualstudio.com/) + [RA](https://github.com/rust-lang/rust-analyzer)
 
->Rust-Analyer(简称RA)是由Rust社区维护的RLS 2.0, RLS有的它更好, RLS没有的它还有, 原来的官方插件已废弃, 现在 RA 正式进入 Rust 官方 Repository, 所以更推荐安装这一个. 更多内容可以浏览它官网的[用户手册](https://rust-analyzer.github.io/manual.html)
+> Rust-Analyer(简称RA) 是由Rust社区维护的 RLS 2.0, RLS 有的它更好, RLS 没有的它还有, 原来的官方插件已废弃, 现在 RA 正式进入 Rust 官方 Repository, 所以更推荐安装这一个. 更多内容可以浏览它官网的 [用户手册](https://rust-analyzer.github.io/manual.html)
 
 下面是其他的可能需要的插件
 
 - [Chinese (Simplified)](https://marketplace.visualstudio.com/items?itemName=MS-CEINTL.vscode-language-pack-zh-hans) 简体中文插件
-- [Crates](https://marketplace.visualstudio.com/items?itemName=serayuzgur.crates) Rust Crate 版本检查插件
+- [Dependi](https://marketplace.visualstudio.com/items?itemName=fill-labs.dependi) Rust Crate 版本检查插件
 - [Even Better Toml](https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml) 更好的 Toml 语言插件
 - [Codeium](https://marketplace.visualstudio.com/items?itemName=Codeium.codeium) 一个类似 Copilot 的 AI 代码提示插件
 - [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb) 可以用于调试 Rust 代码, 但功能有限, 需要安装对应的组件 `rustup component add llvm-tools`
@@ -185,6 +229,6 @@ cargo -V
 
 除了大家所熟知的 Rust 游戏和我们今天介绍的 Rust 语言, 别忘了 Rust 最初的含义 --- 锈, 而锈中的代表物, 铁锈, `Fe₂O₃` 就是类似这种红色
 
-社区中常常打着 **REIR (Rewrite Everything In Rust)** 的旗号, 而用 Rust 重写某个组件的过程常常被称为 **「氧化」** . 比如有一个为Python编写Rust扩展的库, 就叫PyO3, 也有许多库从诞生时名字就以 **Dio (二氧化物)** 开头.
+社区中常常打着 **REIR (Rewrite Everything In Rust)** 的旗号, 而用 Rust 重写某个组件的过程常常被称为 **「氧化」** . 比如有一个为 Python 编写 Rust 扩展的库, 就叫PyO3, 也有许多库从诞生时名字就以 **Dio (二氧化物)** 开头.
 
-至于为什么选个螃蟹当吉祥物, 或许这是因为 Rust 开发者们的一个自称 --- **Rustacean**, 因为这个词是 **「甲壳纲动物」** 这个单词 **Crustacean (krʌ'steʃən)** 去掉了首字母 C 演变而来的, 去掉了C 就露出了 Rust 这四个字母, 或许还含有着去掉 C 用 Rust 重写之意. 而在甲壳纲动物里对大家而言螃蟹应该是最熟悉的了吧。
+至于为什么选个螃蟹当吉祥物, 或许这是因为 Rust 开发者们的一个自称 --- **Rustacean**, 因为这个词是 **「甲壳纲动物」** 这个单词 **Crustacean (krʌ'steʃən)** 去掉了首字母 C 演变而来的, 去掉了 C 就露出了 Rust 这四个字母, 或许还含有着去掉 C 用 Rust 重写之意. 而在甲壳纲动物里对大家而言螃蟹应该是最熟悉的了吧.

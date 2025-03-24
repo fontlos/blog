@@ -39,7 +39,7 @@ for item in collection {
 2. `&collection` 等价于 `collection.iter()`	不可变借用
 3. `&mut collection` 等价于 `collection.iter_mut()`	可变借用
 
-再简单提一下迭代器, 其还可以是以下两种形式
+再简单提一下迭代器, 最简单的形式就是一个范围迭代器
 
 1. `1..10`, 表示 1 到 9 的整数
 2. `1..=10`, 表示 1 到 10 的整数
@@ -96,8 +96,70 @@ for item in collection {
 - 第一种方式对 `collection` 的索引访问是 **非连续的**, 有可能在两次访问之间 `collection` 发生了变化, 导致脏数据产生
 - 而第二种迭代器的方式是连续访问, 通过所有权限制保证在访问过程中数据并不会发生变化
 
+Rust 的 `for` 循环比 C 中的更加优秀强大, 无需任何条件限制, 也不需要通过索引来访问, 再加上 Rust 的 **零成本抽象**, 是 Rust 中最安全且高效的循环, 因此也是最常用的循环.
 
-Rust 的 `for` 循环比 C 中的更加优秀强大, 无需任何条件限制, 也不需要通过索引来访问, 再加上 Rust 的 **零成本抽象**, 是  Rust 中最安全且高效的循环, 因此也是最常用的循环
+### 简单认识一些迭代器方法
+
+有些时候, 迭代器方法比用 `for` 循环手动实现性能还要高
+
+- `map`: 映射
+
+```rs
+let nums = vec![1, 2, 3];
+let squares: Vec<_> = nums.iter().map(|x| x * x).collect();
+println!("{:?}", squares); // [1, 4, 9]
+```
+
+- `filter`: 过滤
+
+```rs
+let nums = vec![1, 2, 3, 4];
+let evens: Vec<_> = nums.iter().filter(|&x| x % 2 == 0).collect();
+println!("{:?}", evens); // [2, 4]
+```
+
+- `flatten`: 展开
+
+```rs
+let nested = vec![vec![1, 2], vec![3, 4]];
+let flat: Vec<_> = nested.into_iter().flatten().collect();
+println!("{:?}", flat); // [1, 2, 3, 4]
+```
+
+- `fold`: 从给定值积累
+
+```rs
+let nums = vec![1, 2, 3];
+let sum = nums.iter().fold(0, |acc, x| acc + x);
+println!("{}", sum); // 6
+```
+
+- `sum / product`: 求和/求积
+
+```rs
+let nums = vec![1, 2, 3];
+let total: i32 = nums.iter().sum();
+println!("{}", total); // 6
+```
+
+- `find`: 查找
+
+```rs
+let nums = vec![1, 2, 3];
+let first_even = nums.iter().find(|&&x| x % 2 == 0);
+println!("{:?}", first_even); // Some(2)
+```
+
+- `zip`: 合并
+
+```rs
+let names = ["Alice", "Bob"];
+let ages = [30, 25];
+let zipped: Vec<_> = names.iter().zip(ages.iter()).collect();
+println!("{:?}", zipped); // [("Alice", 30), ("Bob", 25)]
+```
+
+并且迭代器之间能链式调用, 组合出强大的功能
 
 ## While 条件循环
 
@@ -131,7 +193,7 @@ while index < 5 {
 
 ## Loop 无限循环
 
-C 或者Rust 都可以通过 `while true` 来实现一个无限循环, 但 Rust 又单独专门设计了一个无限循环 --- `loop`
+C 或者 Rust 都可以通过 `while true` 来实现一个无限循环, 但 Rust 又单独专门设计了一个无限循环 --- `loop`
 
 ```rust
 /// 注: loop 同样返回一个 `!` 类型
@@ -153,9 +215,13 @@ loop {
 也可以使用标签退出指定循环
 
 ```rust
+let x = loop {
+    break 123;
+};
+
 'outer: loop {
     'inner: loop {
-        println!("退出外部循环")；
+        println!("退出外部循环");
         break 'outer
     }
 }
@@ -173,22 +239,22 @@ loop {
 let day = 5;
 
 match day {
-    0 | 6 => println!("休息日")，
-    1 ... 5 => println!("工作日")，
+    0 | 6 => println!("休息日"),
+    1 ..= 5 => println!("工作日"),
     _ => println!("none"),
 }
 ```
 
-`|` 用于匹配多个值, `...` 或 `..=` 用于匹配一个范围, 包括开头结尾, 因为 `match` 进行的是穷举性匹配, 所以需要一个 `_` 匹配剩下的所有值
+`|` 用于匹配多个值, `..` 或 `..=` 用于匹配一个范围, 因为 `match` 进行的是穷举性匹配, 所以有时需要一个 `_` 匹配剩下的所有值
 
 可以使用 `@` 来绑定一个变量
 
 ```rust
 let a = 1;
 match a {
-    b @ 1...3 => println!("a = {}", b),
+    b @ 1..=3 => println!("a = {}", b),
     // 也可以给绑定的变量起一个新的名字
-    c: num @ 4...6 => println!("a = {}", num),
+    c: num @ 4..=6 => println!("a = {}", num),
     // 绑定也可以匹配多个值, 但要记得加括号
     d @ (7 | 8) => println!("a = {}", d),
     _ => println!("Match failed"),
@@ -208,7 +274,7 @@ enum Num<'a> {
     RefRef(&'a i32),
 }
 
-fn print_data(data: &u32) {
+fn print_data(data: &i32) {
     println!("log data: {}", data);
 }
 
@@ -217,35 +283,39 @@ fn print_data(data: &u32) {
 // }
 
 fn print_type<T>(_: T) {
-    println!("log type name: {}", unsafe { std::intrinsics::type_name::<T>() })
+    println!("log type name: {}", std::intrinsics::type_name::<T>())
 }
 
 fn log(num: Num) {
     match num {
-        Favour::Nor(data) => {
-            config(&data);
-            print_type_name_of(data);
+        // 非引用容器, 内部是非引用变量
+        Num::Nor(data) => {
+            print_data(&data);
+            print_type(data);
         },
-        Favour::NorRef(ref data) => {
-            config(data);
-            print_type_name_of(data);
+        // 非引用容器, 但我们可以通过 ref 获得一个引用变量
+        Num::NorRef(ref data) => {
+            print_data(data);
+            print_type(data);
         },
-        Favour::Ref(data) => {
-            config(data);
-            print_type_name_of(data);
+        // 引用容器, 内部是一个引用变量
+        Num::Ref(data) => {
+            print_data(data);
+            print_type(data);
         },
-        Favour::RefRef(ref data) => {
-            config(data);
-            print_type_name_of(data);
+        // 引用容器, 但我们可以再获得一个引用的引用
+        Num::RefRef(ref data) => {
+            print_data(data);
+            print_type(data);
         }
     }
 }
 
 fn main() {
-    log(Favour::Nor(1));
-    log(Favour::Ref(&2));
-    log(Favour::NorRef(3));
-    log(Favour::RefRef(&4));
+    log(Num::Nor(1));
+    log(Num::NorRef(2));
+    log(Num::Ref(&3));
+    log(Num::RefRef(&4));
 }
 ```
 
@@ -253,13 +323,13 @@ fn main() {
 
 ```
 log data: 1
-log type name: u32
+log type name: i32
 log data: 2
-log type name: &u32
+log type name: &i32
 log data: 3
-log type name: &u32
+log type name: &i32
 log data: 4
-log type name: &&u32
+log type name: &&i32
 ```
 
 通过 `ref mut` 在模式匹配中可以获得可变引用
@@ -267,7 +337,12 @@ log type name: &&u32
 ```rust
 let mut a = 1;
 match a {
-    ref mut x => println!(x),
+    ref mut x => {
+        // 解引用并改变 x, 因为 x 是 a 的可变引用, 所以会影响到 a
+        *x = *x + 1;
+        // 这将输出 2
+        println!("{a}")
+    },
 }
 ```
 
@@ -287,18 +362,20 @@ match point {
 
 ### 忽略变量
 
-可以使用 `..` 来忽略变量
+在解构复合类型时可以使用 `..` 来忽略剩余所有变量, 如果只需要忽略一个也可以使用 `_`
 
 ```rust
 struct Point {
-    x:i32,
-    y:i32,
+    x: i32,
+    y: i32,
+    z: i32
 }
 
 let point = Point {
-    x:10,
-    y:10
-}
+    x: 10,
+    y: 10,
+    z: 10
+};
 
 match point {
     Point {x,..} =>println!("x is {}",x),
@@ -306,7 +383,7 @@ match point {
 
 enum Int{
     Value(i32),
-    N
+    Nan
 }
 
 let value = Int::Value(10);
@@ -314,8 +391,8 @@ let value = Int::Value(10);
 match value{
     Int::Value(i) if i>5=>println!("这个数字大于5"),
     Int::Value(..)=>println!("是一个数字"),
-    Int::N=>println!("不是数字"),
-}
+    Int::Nan=>println!("不是数字"),
+};
 ```
 
 但要注意 `..` 必须是无歧义的, 比如下面的代码无法运行
@@ -338,10 +415,10 @@ match numbers {
 ```rust
 let age = Some(0); // 此时 age 是 Some(T) 类型
 match age { // match 作用域开始
-    // 下一行 age 是 i32 类型, 但或许我们本想使用 Some(T) 类型
-    Some(age) =>  println!("匹配出来的age是{}",age),
+    // 下一行 age 是 i32 类型
+    Some(age) =>  println!("匹配出来的 age 是 {}",age),
     _ => ()
-}// match 作用域结束
+}// match 作用域结束, i32 的 age 被 Drop
 // 此时 age 是 Some(T) 类型
 ```
 
@@ -361,7 +438,7 @@ match num {
 
 当匹配模式无法提供类如 `if x > 0` 的表达能力时可以考虑这种方式
 
-匹配守卫还能解决上面变量遮蔽导致无法使用外部变量的问题
+匹配守卫不会有上面变量遮蔽导致无法使用外部变量的问题
 
 ```rust
 let x = Some(5);
@@ -395,7 +472,7 @@ match x {
 
 考虑以下这种情况
 
-有一个动态数组，里面存有以下枚举：
+有一个动态数组, 里面存有以下枚举：
 
 ```rust
 enum Bin {
@@ -407,13 +484,13 @@ fn main() {
     let bin = vec![Bin::One, Bin::One, Bin::Zero];
 }
 ```
-如果想对 `bin` 进行过滤，只保留类型是 `Bin::One` 的元素, 这种做法是不行的
+如果想对 `bin` 进行过滤, 只保留类型是 `Bin::One` 的元素, 这种做法是不行的
 
 ```rust
 bin.iter().filter(|b| b == Bin::One);
 ```
 
-因为无法将 x 直接跟一个枚举成员进行比较. 虽然也可以用 `match` 来解决, 但在迭代器链式调用中略显啰嗦, 好在 Rust 标准库提供了一个非常实用的宏: `matches!`, 可以将一个 **表达式** 跟 **模式** 进行匹配, 并根据是否匹配成功返回 `true` 或 `false`. 因此上面的代码可以改成这样
+因为我们没有为 Bin 这个枚举实现用于比较的 Trait. 虽然也可以用 `match` 来解决, 但在迭代器链式调用中略显啰嗦, 好在 Rust 标准库提供了一个非常实用的宏: `matches!`, 可以将一个 **表达式** 跟 **模式** 进行匹配, 并根据是否匹配成功返回 `true` 或 `false`. 因此上面的代码可以改成这样
 
 ```rust
 bin.iter().filter(|b| matches!(b, Bin::One));
@@ -425,7 +502,7 @@ bin.iter().filter(|b| matches!(b, Bin::One));
 let f = 'f';
 // assert! 宏用于判断一个表达式是否为 true
 // 同样可以指定多个模式
-assert!(matches!(foo, 'A'..='Z' | 'a'..='z'));
+assert!(matches!(f, 'A'..='Z' | 'a'..='z'));
 
 let four = Some(4);
 // 同样可以使用匹配守卫
@@ -439,7 +516,7 @@ assert!(matches!(four, Some(x) if x > 2));
 ```rust
 enum Int{
     Value(i32),
-    N
+    Nan
 }
 
 let a = Int::Value(10);
@@ -453,10 +530,10 @@ let mut b = Int::Value(1);
 while let Int::Value(v) = b {
     if v>3 {
         println!("b is over 3");
-        b = N
+        b = Int::Nan
     } else {
-        println!("b is {:?}, add one",i);
-        b = Int::Value(i+1);
+        println!("b is {:?}, add one", v);
+        b = Int::Value(v + 1);
     }
 }
 ```
@@ -472,7 +549,7 @@ struct Point {
     y: i32,
 }
 
-// 绑定新变量 `p`，同时对 `Point` 进行解构
+// 绑定新变量 `p`, 同时对 `Point` 进行解构
 let point = Point {x: 10, y: 5};
 if let p @ Point {x: 10, y} = point {
     println!("x is 10 and y is {} in {:?}", y, p);
@@ -480,8 +557,6 @@ if let p @ Point {x: 10, y} = point {
     println!("x was not 10 :(");
 }
 
-// 对了, 还记得我们之前也通过 `let` 解构过复合类型吗
-// 我们还说过 `let` 也是一种匹配模式, 所以 ...
 let p @ Point {x: px, y: py } = Point {x: 10, y: 23};
 println!("x: {}, y: {}", px, py);
 println!("{:?}", p);
@@ -493,7 +568,7 @@ println!("{:?}", p);
 
 作为一门现代语言, 没有空值不行, 但作为一门注重安全的语言, 有空值又不好, 于是 Rust 通过枚举巧妙地解决了这个问题, 构造了一个 **Option (可能存在的值)**
 
-`Option` 在结构上非常类似我们上面所举的最后一个例子
+`Option` 在结构上非常类似我们上面所举的 `Int` 枚举这个例子
 
 ```rust
 enum Option<T> {
@@ -605,7 +680,7 @@ stack backtrace:
 note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
 ```
 
-上面打印的内容就是一次 **栈展开 (栈回溯)**, 包含了函数调用的顺序 (**逆序**), 排在最顶部最后一个调用的函数是 `rust_begin_unwind`，该函数的目的就是进行栈展开, 并呈现这些信息给我们
+上面打印的内容就是一次 **栈展开 (栈回溯)**, 包含了函数调用的顺序 (**逆序**), 排在最顶部最后一个调用的函数是 `rust_begin_unwind`, 该函数的目的就是进行栈展开, 并呈现这些信息给我们
 
 > 注: 获取到栈回溯信息需要开启 `debug` 标志, 只要在使用 `cargo run` 或 `cargo build` 不加 `--release` Flag 即可, 这两个操作默认是 Debug 运行方式. 而且栈展开信息在不同操作系统或者 Rust 版本上也有所不同
 
@@ -670,7 +745,7 @@ fn main() {
 - 如果是文件不存在错误 `ErrorKind::NotFound` 就创建文件, 这里创建文件. `File::create` 也是返回 `Result`, 因此继续用 `match` 进行匹配
     - 创建成功, 将新的文件句柄赋值给 `f`
     - 如果失败, 则 Panic
-- 剩下的错误，一律 Panic
+- 剩下的错误, 一律 Panic
 
 事实上这样写也有一点啰嗦. 在初识 Rust 后的一些进阶学习中, 我们会讲到 **组合器** 这个强大的工具
 
@@ -715,7 +790,7 @@ fn read_file() -> Result<String, io::Error> {
 }
 ```
 
-上面的代码很好的实现了我们的需求, 但还有一个问题 ,有些过于冗长. 幸运的是, Rust为我们提供了一个很甜的 **语法糖** --- `?` 运算符
+上面的代码很好的实现了我们的需求, 但还有一个问题, 有些过于冗长. 幸运的是, Rust为我们提供了一个很甜的 **语法糖** --- `?` 运算符
 
 下面让我们来看看这颗语法糖到底有多甜, 同样的功能用 `?` 重新实现:
 

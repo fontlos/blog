@@ -2,7 +2,7 @@
 feature: false
 title: 初识 Rust(7) | 生命周期, 格式化输出与文件 IO
 date: 2021-06-08 22:14:48
-abstracts: 简单认识一下宏. 介绍一下如何漂亮的打印各种类型以方便调试程序. 最后简单介绍一些文件IO
+abstracts: 认识 Rust 中可能最让人头疼的生命周期. 简单认识一下宏, 介绍一下如何漂亮的打印各种类型以方便调试程序. 最后简单介绍一些文件IO
 tags:
     - Rust
 categories:
@@ -53,7 +53,7 @@ struct Strs<'a> {
     - 例如 `fn foo(x: &i32) -> &i32`, `x` 的生命周期会被自动赋给返回值 `&i32`, 即 `fn foo<'a>(x: &'a i32) -> &'a i32`
 3. 若存在多个输入生命周期, 且其中一个是 `&self` 或 `&mut self`, 则 `&self` 的生命周期被赋给所有的输出生命周期
     - 拥有 `&self`参数, 说明该函数是一个 **方法**, 该规则让方法的使用便利度大幅提升
-    - 若一个方法，它的返回值的生命周期就是跟参数 &self 的不一样, 这时答案就很简单了: 手动标注生命周期. 因为这些规则只是当你没标注时编译器默认加上的
+    - 若一个方法, 它的返回值的生命周期就是跟参数 `&self` 的不一样, 这时答案就很简单了: 手动标注生命周期. 因为这些规则只是当你没标注时编译器默认加上的
 
 让我们通过模拟编译器理解一下这些规则
 
@@ -137,9 +137,9 @@ fn main() {
 }
 ```
 
-我们发现 `&mut foo` 和 `bar` 的生命周期都是 `'c`. 还记得 **生命周期消除规则** 第三条吗, 这导致了 `take_mutable` 方法中参数 `&mut self` 和返回值 `&Self` 拥有相同的生命周期, 因此, 若返回值的生命周期在 `main` 函数有效, 那 `&mut self` 的借用也是在 `main` 函数有效, 于是就违背了可变借用与不可变借用不能同时存在的规则, 最终导致了编译错误
+我们发现由于 **生命周期消除规则** 第三条导致 `&mut foo` 和 `bar` 的生命周期都被绑定为 `'c`. 即 `take_mutable` 方法中参数 `&mut self` 和返回值 `&Self` 拥有相同的生命周期, 因此, 若返回值的生命周期在 `main` 函数有效, 那 `&mut self` 的借用也是在 `main` 函数有效, 于是就违背了可变借用与不可变借用不能同时存在的规则, 最终导致了编译错误
 
-实际上, 上述代码逻辑上完全正确, 但是因为生命周期系统的的死板, 导致了编译错误, 不幸的是, 截止到现在, 遇到这种因为生命周期系统的不靠谱导致的编译错误没有什么特别好的解决办法, 基本只能去修改代码. 期待后续堆生命周期系统继续完善, 让它足够聪明来理解这个问题
+实际上, 上述代码逻辑上基本是正确, 但是因为生命周期系统的的死板, 导致了编译错误, 不幸的是, 截止到现在, 遇到这种因为生命周期系统的不靠谱导致的编译错误没有什么特别好的解决办法, 基本只能去修改代码, 当然日常开发也很少出现这种奇葩的代码. 期待后续堆生命周期系统继续完善, 让它足够聪明来理解这个问题
 
 ## 无界生命周期
 
@@ -155,7 +155,7 @@ fn foo<'a, T>(x: *const T) -> &'a T {
 }
 ```
 
-这种生命周期由于没有受到任何约束, 因此它想要多大就多大, 它实际上比 `'static` 还要强大. 例如 `&'static &'a T` 是无效类型, 但是无界生命周期 `&'unbounded &'a T` 会被视为 `&'a &'a T` 从而通过编译检查, 因为它的大小完全取决于需要它多大
+这种生命周期由于没有受到任何约束, 因此它想要多大就多大, 它实际上比 `'static` 还要强大. 例如 `&'static &'a T` 是无效类型, 但是无界生命周期 `&'unbounded &'a T` 可以 **"自适应收缩"**, 会被视为 `&'a &'a T` 从而通过编译检查, 因为它的大小完全取决于需要它多大
 
 因此我们要尽量避免这种无界生命周期. 最简单方式就是在函数声明中运用生命周期消除规则. 若一个输出生命周期被消除了, 那么必定因为有一个输入生命周期与之对应
 
@@ -197,7 +197,7 @@ impl Foo for Bar<'_> {
 }
 ```
 
-`'_` 生命周期表示 `BufReader` 有一个不使用的生命周期, 我们可以忽略它, 无需为它创建一个名称, 那既然用不到为何还要写出来呢? 别忘了, **生命周期参数也是类型的一部分**, 因此 `BufReader<'a>` 是一个完整的类型, 在实现它的时候, 你不能把 `'a` 给丢了
+`'_` 生命周期表示 `Bar` 有一个不使用的生命周期, 我们可以忽略它, 无需为它创建一个名称, 那既然用不到为何还要写出来呢? 别忘了, **生命周期参数也是类型的一部分**, 因此 `Bar<'a>` 是一个完整的类型, 在实现它的时候, 你不能把 `'a` 给丢了
 
 ## 闭包的生命周期消除规则
 
@@ -214,7 +214,7 @@ let bar = |x: &i32| -> &i32 { x };
 
 这是因为对于函数的生命周期而言, 它的消除规则之所以能生效是因为它的 **生命周期完全体现在签名的引用类型** 上, 在函数体中无需任何体现, 因此编译器可以做各种编译优化, 也很容易根据参数和返回值进行生命周期的分析, 最终得出消除规则
 
-可闭包的生命周期分散在参数和闭包函数体中, 编译器就必须深入到函数体中, 去分析和推导, 复杂度因此急剧提升
+可闭包可以捕获外部变量, 它的生命周期分散在参数和闭包函数体中, 编译器就必须深入到函数体中, 去分析和推导, 复杂度因此急剧提升
 
 日常遇到这个问题, 还是老老实实用函数吧. 这个问题很难解决, 但不是无法解决, 比如通过使用 `Fn trait`
 
@@ -283,7 +283,7 @@ fn main() {
 }
 ```
 
-乍一看, 同时有了可变引用 `r` 和不可变引用 `rr`, 这不是违反了借用规则吗? 但实际上并没有, 因为 `rr` 是对 `r` 的再借用
+乍一看, 同时有了可变引用 `r` 和不可变引用 `rr`, 这不是违反了借用规则吗? 但实际上并没有, 因为 `rr` 是对 `r` 的再借用, 先解再借
 
 ```rust
 let mut p = Point { x: 0, y: 0 };
@@ -343,7 +343,7 @@ println!(
 ```rust
 use std::fmt::Debug;
 
-fn print<T: Debug + 'static>( input: T) {
+fn print<T: Debug + 'static>(input: T) {
     println!("'static value passed in is: {:?}", input);
 }
 
@@ -365,7 +365,7 @@ fn main() {
 
 ```rust
 // print_impl 同理
-fn print<T: Debug + 'static>( input: &T) {
+fn print<T: Debug + 'static>(input: &T) {
     println!("'static value passed in is: {:?}", input);
 }
 ```
@@ -374,26 +374,17 @@ fn print<T: Debug + 'static>( input: &T) {
 
 那么 ``static` 到底针对谁, 是 `&'static` 这个引用还是该引用指向的数据活得跟程序一样久呢
 
-答案是引用指向的数据, 而引用本身是要遵循其作用域范围的, 就像这个简单的例子
+答案是引用指向的数据, 而引用本身是要遵循其作用域范围的, 就像之前我们从内存地址重新获得字符串字面量的例子
 
-```rust
-{
-    let static_str = "I'm static";
-    println!("{}", static_str);
-    // 该变量被 Drop, 但是数据依然存在
-}
-println!("{}", static_str);
-```
-
-最后, 一个经验是: 如果你需要添加 &'static 来让代码工作, 那很可能是设计上出问题了
+最后, 一个经验是: 如果你需要添加 `&'static` 来让代码工作, 那很可能是设计上出问题了
 
 # 格式化输出宏
 
-在上一篇文章我们一上来就接触到了一个在其它语言初学中不会上来就学的东西 --- **宏**
+在 Rust 的初学中我们一上来就接触到了一个在其它语言初学中不会上来就学的东西 --- **宏**
 
 格式化输出都需要宏可见 Rust 是比较依赖宏的语言
 
-Rust 的宏基于 **AST** 语法树而非 C++ 中简单的字符串替换, 所以更加强大, 甚至可以扩展 Rust 自身的 "语法"
+Rust 的宏基于 **AST** 语法树而非 C++ 中简单的字符串替换, 所以更加强大, 甚至可以扩展 Rust 自身的 **"语法"**
 
 将字符打印到控制台的操作由 `std::fmt` 里面的一系列宏来处理:
 - `format!`: 格式化一系列字符串和参数为 `String`
@@ -526,10 +517,10 @@ use std::fmt;
 
 // 带有两个数字的结构体. 推导出 `Debug`, 以便与 `Display` 的输出进行比较
 #[derive(Debug)]
-struct MinMax(i64, i64);
+struct Range(i64, i64);
 
-// 实现 `MinMax` 的 `Display`
-impl fmt::Display for MinMax {
+// 实现 `Range` 的 `Display`
+impl fmt::Display for Range {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // 使用 `self.number` 来表示各个数据
         write!(f, "({}, {})", self.0, self.1)
@@ -552,14 +543,14 @@ impl fmt::Display for Point2D {
 }
 
 fn main() {
-    let minmax = MinMax(0, 14);
+    let range = Range(0, 14);
 
     println!("Compare structures:");
-    println!("Display: {}", minmax);
-    println!("Debug: {:?}", minmax);
+    println!("Display: {}", range);
+    println!("Debug: {:?}", range);
 
-    let big_range =   MinMax(-300, 300);
-    let small_range = MinMax(-3, 3);
+    let big_range =   Range(-300, 300);
+    let small_range = Range(-3, 3);
 
     println!("The bigger range is {big} ,the smaller range is {small}",
         small = small_range,
@@ -572,7 +563,6 @@ fn main() {
     println!("Display: {}", point);
     println!("Debug: {:?}", point);
 }
-
 ```
 
 # 输入输出流
@@ -586,6 +576,7 @@ fn read_input() -> io::Result<()> {
     //创建空字符串
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
+    // 去除两端空白字符
     println!("Your input: {}", input.trim());
     Ok(())
 }
@@ -614,7 +605,7 @@ fn main() {
 
 ## 文件输入
 
-文件输入流指向了文件而不是控制台, 一般通过 match 处理潜在错误
+文件输入流指向了文件而不是控制台, 一般通过 `match` 处理潜在错误
 
 ```rust
 use std::error::Error;
@@ -678,7 +669,7 @@ use std::fs::OpenOptions;
 let file = OpenOptions::new() // 创建一组可供配置的空白新选项, 每个选项的默认值都是 false
     .read(true) // 启用 读 模式
     .write(true) // 启用 写 模式
-    .create(true) // 如果不存在则创建文件, 存在就返回文件
+    .create(true) // 如果不存在则创建文件, 存在就返回文件, 启用这个就会自动启用读写
     .open("test.txt"); // 文件路径
 ```
 

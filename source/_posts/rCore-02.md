@@ -545,7 +545,7 @@ for app in apps:
 
         print(f"[build.py]: Converted {elf_file} to {bin_file}")
 
-        # 如果是 chapter 3，增加 app_id
+        # 如果是 chapter 3, 增加 app_id
         if chapter == 3:
             app_id = app_id + 1
 
@@ -763,7 +763,7 @@ pub fn print_app_info() {
         - 当 Trap 发生时, SIE 会被清零, 禁用中断
     - SPIE (Supervisor Previous Interrupt Enable): 保存 Trap 发生之前的 SIE 值, 用于在 Trap 返回时恢复中断状态
     - 用途: 在 Trap 发生时, 保存当前状态; 在 Trap 返回时, 恢复状态
-- `sepc` **(Supervisor Exception Program Counter)**: 当 Trap 是一个异常的时候，记录 Trap 发生之前执行的最后一条指令的地址
+- `sepc` **(Supervisor Exception Program Counter)**: 当 Trap 是一个异常的时候, 记录 Trap 发生之前执行的最后一条指令的地址
     - 当 Trap 是异常时, sepc 会保存触发异常的指令地址
     - 当 Trap 是中断时, sepc 会保存下一条即将执行的指令地址
     - 在 Trap 处理完成后, 可以通过 sepc 返回到原来的执行流
@@ -883,7 +883,7 @@ pub struct TrapContext {
 控制状态寄存器
 
 - scause 和 stval: 在 Trap 处理的第一时间就会被使用或保存, 因此它们的值不会被覆盖或丢失, 无需在 TrapContext 中保存
-- sstatus 和 sepc: 在 Trap 处理的全程都有意义. 在 Trap 嵌套的情况下, 它们的值可能会被覆盖. 因此，需要在 TrapContext 中保存, 并在 Trap 返回时恢复
+- sstatus 和 sepc: 在 Trap 处理的全程都有意义. 在 Trap 嵌套的情况下, 它们的值可能会被覆盖. 因此, 需要在 TrapContext 中保存, 并在 Trap 返回时恢复
 
 其他 CSR 交给硬件自行更新
 

@@ -12,7 +12,9 @@ cover: https://fontlos.com/cover/ferris.png
 
 # 方法
 
-Rust 通过 `impl` 关键字在 `struct` , `enum` 或者 `trait` 对象的上下文实现方法调用语法, 一个对象可以有多个 `impl` 块. 关联函数的第一个参数通常为 `self` 参数, 一个指代方法或 Trait 类型的别名, 有 3 种变体:
+举一个简单的例子, 我们有一个代表矩形的结构体, 现在需要创建矩形, 有时也需要求它的面积, 那么很简单就能写两个函数就能做到. 但是我们也知道, 矩形, 矩形的创建和它的面积计算公式是高度相关的, 那么有没有办法把它们放在一起增强联系性呢? 当然是有的, 这在 Rust 中被称为 **关联函数** 和 **方法**
+
+Rust 通过 `impl` 关键字在 `struct` , `enum` 或者 `trait` 对象的上下文实现关联函数与方法的实现, 一个对象可以有多个 `impl` 块. 关联函数的第一个参数通常为 `self` 参数, 用于指代被关联的对象自身, 有 3 种变体:
 
 - `self`, 允许实现者移动和修改对象, 对应的闭包特性为 `FnOnce`
 - `&self`, 既不允许实现者移动对象也不允许修改, 对应的闭包特性为 `Fn`
@@ -29,7 +31,7 @@ struct Rectangular {
 // 为该结构体创建方法
 impl Rectangular {
     /// 创建矩形
-    // 不含 self 参数的方法也称为静态方法
+    // 不含 self 参数的方法也称为静态方法或关联函数
     fn new(width: u32, height: u32) -> Rectangular {
         Rectangular {
             width,
@@ -43,7 +45,7 @@ impl Rectangular {
             height: size
         }
     }
-    /// 获得矩形宽
+    /// 这是矩形的一个方法, 获得矩形宽
     fn get_width(&self) -> u32 {
         self.width
     }
@@ -165,7 +167,7 @@ fn display_array<T: std::fmt::Debug, const N: usize>(arr: [T; N]) {
 
 ## 泛型的性能
 
-对于多态函数，有两种 **派分** 机制: **静态派分** 和 **动态派分**. 前者类似于 C++ 的模板, Rust 会生成适用于指定类型的特殊函数, 然后在被调用的位置进行替换, 好处是允许函数被内联调用, 性能没有损耗, 毕竟这就像是我们为每个类型都手动实现了对应的函数, 但是这会导致代码膨胀, 使最终得二进制文件变大. 后者类似于 Go 的 `interface`, Rust 通过引入 **Trait Object (特征对象)** 来实现, 在运行期查找 **虚表** 来选择执行的方法. Trait Object 具有和 Trait相同的名称, 通过 **转换** 或者强制 **多态化** 一个指向具体类型的指针来创建, 会带来一定的性能损耗
+对于多态函数, 有两种 **派分** 机制: **静态派分** 和 **动态派分**. 前者类似于 C++ 的模板, Rust 会生成适用于指定类型的特殊函数, 然后在被调用的位置进行替换, 好处是允许函数被内联调用, 性能没有损耗, 毕竟这就像是我们为每个类型都手动实现了对应的函数, 但是这会导致代码膨胀, 使最终得二进制文件变大. 后者类似于 Go 的 `interface`, Rust 通过引入 **Trait Object (特征对象)** 来实现, 在运行期查找 **虚表** 来选择执行的方法. Trait Object 具有和 Trait相同的名称, 通过 **转换** 或者强制 **多态化** 一个指向具体类型的指针来创建, 会带来一定的性能损耗
 
 # Trait
 
@@ -204,7 +206,7 @@ impl HasArea for Square {
 
 ```
 
-总而言之, **Trait 定义了一组可以被共享的行为, 只要实现了Trait, 就能使用这组行为**
+总而言之, **Trait 定义了一组可以被共享的行为, 只要实现了 Trait, 就能使用这组行为**
 
 ## 特征约束
 
@@ -263,7 +265,27 @@ fn bar<T, K>(x: T, y: K)
 }
 ```
 
-`where` 从句还允许限定的左侧可以是任意类型, 而不仅仅是类型参数
+`where` 从句还允许限定的左侧可以是任意类型, 而不仅仅是类型参数, 虽然一般用不到
+
+```rs
+trait MyTrait {
+    fn do_something(&self);
+}
+
+impl MyTrait for i32 {
+    fn do_something(&self) {
+        println!("i32: {}", self);
+    }
+}
+
+fn test() where i32: MyTrait {
+    42.do_something();
+}
+
+fn main() {
+    test();
+}
+```
 
 定义在 Trait 中的完整方法称为 **默认方法**, 可以被该 Trait 的实现 **重载**. 此外, Trait之间也可以存在 **继承**
 
@@ -305,6 +327,46 @@ TraitName::method_name(valuable);
 
 // 展开形式
 <TypeName as TraitName>::method_name(valuable);
+```
+
+例如
+
+```rs
+trait Greet {
+    fn greet(&self);
+}
+
+trait Salute {
+    fn greet(&self);
+}
+
+struct Person;
+
+impl Greet for Person {
+    fn greet(&self) {
+        println!("Hello!");
+    }
+}
+
+impl Salute for Person {
+    fn greet(&self) {
+        println!("Salutations!");
+    }
+}
+
+fn main() {
+    let person = Person;
+
+    // person.greet();  // 编译错误：multiple `greet` found
+
+    // 显式调用（短形式）
+    Greet::greet(&person);
+    Salute::greet(&person);
+
+    // 显式调用（完全限定语法）
+    <Person as Greet>::greet(&person);
+    <Person as Salute>::greet(&person);
+}
 ```
 
 ## 直接用 Trait 作为参数和返回值
@@ -413,7 +475,7 @@ let object = Box::new(graph) as Box<Graph<N=Node, E=Edge>>;
 trait Container<A,B> {
     fn contains(&self,a: A,b: B) -> bool;
 }
-fn difference<A,B,C>(container: &C) -> i32
+fn size<A,B,C>(container: &C) -> i32
   where
     C : Container<A,B> {...}
 
@@ -422,17 +484,24 @@ trait Container{
     type B;
     fn contains(&self, a: &Self::A, b: &Self::B) -> bool;
 }
-fn difference<C: Container>(container: &C) {}
+fn size<C: Container>(container: &C) -> i32 { ... }
 ```
 
 还有一点是我们之前提过 `Self` 用来指代当前调用者的具体类型, 那么如果我们定义了 `type Item`, 就可以使用 `Self::Item` 来指代该类型实现中定义的 `Item` 类型
 
+```rs
+trait Iterator {
+    type Item;  // 关联类型
+    fn next(&mut self) -> Option<Self::Item>;  // 返回 `Self::Item` 类型
+}
+```
+
 ## 关于实现 Trait 的几条限制:
 
-- 如果一个 Trait 不在当前作用域内, 它就不能被实现。
+- 如果一个 Trait 不在当前作用域内, 它就不能被实现
 - 不管是 Trait 还是 `impl`, 默认都只能在当前的 Crate 内起作用
 - 带有 Trait Bound 的泛型函数使用 **单态化实现**, 所以它是 **静态派分** 的
-- 最重要的一点, 不能为一个从外部引入的类型实现一个从外部引入的 Trait, 这两个至少要有一个是在当前作用域定义的, 这时为了防止你破环第三方库的代码或者第三方库破环你的代码, 比如你不能为 `String` 类型实现 `Display trait`. 这被称为 **孤儿原则**
+- 最重要的一点, 不能为一个从外部引入的类型实现一个从外部引入的 Trait, 这两个至少要有一个是在当前作用域定义的, 这时为了防止你破环第三方库的代码或者第三方库破环你的代码, 比如你不能为 `String` 类型实现 `Display trait`. 这被称为 **孤儿原则**, 防止你破坏外部类型的某些方法
 
 ## 绕过孤儿原则
 
@@ -442,7 +511,7 @@ fn difference<C: Container>(container: &C) {}
 
 ## 动态数组
 
-之前我们提到, Rust 的数组是不可变的, 而可变的动态数组, 我们称之为 **Vec (向量)**. 动态数组是一种基于堆内存申请的连续动态数据类型，拥有 O(1) 时间复杂度的索引, 压入 (push), 弹出 (pop)
+之前我们提到, Rust 的数组是不可变的, 而可变的动态数组, 我们称之为 **Vec (向量)**. 动态数组是一种基于堆内存申请的连续动态数据类型, 拥有 O(1) 时间复杂度的索引, 压入 (push), 弹出 (pop)
 
 动态数组在连续的内存空间储存多个值, 因此访问其中某个元素的成本非常低, 但同样只能存储相同类型的元素, 如果需要存储不同类型的元素, 可以使用 **重装枚举类型** 或者接下来会提到的 **Trait Object (特征对象)**
 
@@ -464,7 +533,7 @@ v.push(3);
 // 创建拥有两个元素的 Vec, 并 pop 一个元素
 let mut v = vec![1, 2];
 let two = v.pop();
-// 创建包含 3 个元素的可变 Vec，并索引一个值和修改一个值
+// 创建包含 3 个元素的可变 Vec, 并索引一个值和修改一个值
 let mut v = vec![1, 2, 3];
 let three = v[2];
 v[1] = v[1] + 5;
@@ -541,7 +610,7 @@ let does_not_exist = v.get(100);
 
 初始化 vec 的更多方式:
 ```rust
-let v = vec![0; 3];   // 默认值为 0，初始长度为 3
+let v = vec![0; 3];   // 默认值为 0, 初始长度为 3
 let v = Vec::from([0, 0, 0]); // 从普通数组生成
 let mut v = [0, 1, 2].to_vec();
 v.is_empty() //判断是否为空
@@ -550,16 +619,16 @@ v.remove(3) // 移除指定索引的元素并返回, 比如这里会返回 3
 
 let mut v1 = [3, 4, 5].to_vec(); // append 会清空 v1, 需要增加可变声明
 v.append(&mut v1); // 将 v1 的元素添加到 v
-v.truncate(5); // 截断到指定长度，多余的元素被删除, v: [0, 1, 2, 3, 4]
+v.truncate(5); // 截断到指定长度, 多余的元素被删除, v: [0, 1, 2, 3, 4]
 v.retain(|x| *x > 0); // 仅保留满足条件的元素 v: [1, 2, 3, 4]
-// 删除指定范围的元素，同时获取被删除元素的迭代器, v: [1, 2], m: [3, 4]
+// 删除指定范围的元素, 同时获取被删除元素的迭代器, v: [1, 2], m: [3, 4]
 let mut m: Vec<_> = v.drain(2..=4).collect();
 let v2 = v.split_off(1); // 指定索引处切分成两个 vec, v: [1], v2: [2]
 let slice = &m[0..=1]; // 获取切片
 v.clear() // 清空数组
 ```
 
-动态数组在增加元素时如果容量不足就会导致 Vec 扩容 (目前的策略是重新申请一块 2 倍大小的内存, 再将所有元素拷贝到新的内存位置，同时更新指针数据), 频繁扩容或者当元素数量较多且需要扩容时, 大量的内存拷贝显然会降低程序的性能
+动态数组在增加元素时如果容量不足就会导致 Vec 扩容 (目前的策略是重新申请一块 2 倍大小的内存, 再将所有元素拷贝到新的内存位置, 同时更新指针数据), 频繁扩容或者当元素数量较多且需要扩容时, 大量的内存拷贝显然会降低程序的性能
 
 可以考虑在初始化时就指定一个实际的预估容量, 尽量减少可能的内存拷贝
 
@@ -570,9 +639,11 @@ v.shrink_to_fit(); // 释放剩余的容量, 一般不会主动执行
 ```
 
 ### Vec 的排序
+
 Rust 实现了两种排序算法, 稳定排序 `sort` 和 `sort_by`, 不稳定排序 `sort_unstable` 和 `sort_unstable_by`
 
 **稳定** 指对相等的元素, 不会对其进行重新排序, 而不稳定算法不保证这点, 但速度更快, 内存占用更低
+
 ```rust
 // 排列整数
 let mut vec = vec![1, 3, 2, 5, 4];
@@ -614,7 +685,7 @@ num.sort_unstable()
 
 ## 可变长度字符串
 
-`String` 是一个带有的 `vec:Vec<u8>` 成员的结构体, 可以理解为 `str` 类型的动态形式. 它们的关系相当于 `[T]` 和 `Vec<T>` 的关系, 所以 `String` 类型也有类似 `push` 和 `pop` 的方法
+`String` 是一个带有的 `vec: Vec<u8>` 成员的结构体, 可以理解为 `str` 类型的动态形式. 它们的关系相当于 `[T]` 和 `Vec<T>` 的关系, 所以 `String` 类型也有类似 `push` 和 `pop` 的方法
 
 ```rust
 // 创建一个空的字符串
@@ -674,7 +745,7 @@ let price_map: HashMap<_,_> = price_list.into_iter().collect();
 ```rust
 // 通过 Key 获取 Value
 // get 方法会返回一个 Option 类型, 如果未查询到会返回 None
-// 查询到会返回一个引用类型, 比如这里是 Option<i32>
+// 查询到会返回一个引用类型, 比如这里是 Option<&i32>
 price_map.get("苹果");
 
 // 如果想直接获得 i32 类型可以用以下的方法
@@ -796,8 +867,35 @@ impl Screen {
 
 不是所有 Trait 都能拥有 Trait Object, 只有对象安全的 Trait 才行
 
-如果一个对象时安全的, 它的 Trait 下的所有方法需要有以下特征:
-- 方法的返回类型不能是 `Self`
-- 方法没有任何泛型参数
+如果一个对象是安全的, 它的 Trait 下的所有方法需要有以下特征:
+
+- 方法的返回类型不能是 `Self`, 因为 Trait 对象会擦除具体类型, 无法在运行时知道 Self 是谁
+- 方法没有任何泛型参数, 泛型需要在编译时单态化, 而 Trait 对象是动态分发的, 无法提前知道具体类型
+
+```rs
+trait CloneMe {
+    fn clone_me(&self) -> Self; // 返回 Self, 不满足对象安全
+}
+
+// 尝试创建 trait 对象, `CloneMe` cannot be made into an object
+let obj: Box<dyn CloneMe> = Box::new(String::from("hello"));
+
+trait CloneMe {
+    fn clone_me(&self) -> Box<dyn CloneMe>; // 对象安全
+}
+
+// ==========================
+
+trait Processor {
+    fn process<T>(&self, data: T); // 泛型方法, 不满足对象安全
+}
+
+// 尝试创建 trait 对象, `Processor` cannot be made into an object
+let obj: Box<dyn Processor> = Box::new(MyProcessor);
+
+trait Processor {
+    fn process(&self, data: &dyn std::fmt::Debug); // 对象安全
+}
+```
 
 对象安全对于 Trait Object 是必须的, 因为就像鸭子类型所讲的, 一旦有了特征对象, 我们就不再关心其具体类型了, 但如果 Trait 方法返回了 `Self` 类型, 但是特征对象忘记了其真正的类型, 那这个 `Self` 的处境就非常尴尬, 连它自己都不知道自己是什么了. 对于泛型参数也是同理
