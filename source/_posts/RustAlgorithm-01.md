@@ -10,7 +10,7 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-这是一个非计算机专业的 Rust 数据结构与算法教程, 基于 LearningOS/rustling-classroom-2025s-rustling-25S-template 的十道算法题. 过程中的代码会在最后开源出来
+这是一个非计算机专业的 Rust 数据结构与算法教程, 基于 LearningOS/rustling-classroom-2025s-rustling-25S-template 的十道算法题. 过程中的完整代码在 [fontlos/rustlings-algorithm-2025S](https://github.com/fontlos/rustlings-algorithm-2025S)
 
 # 链表
 
