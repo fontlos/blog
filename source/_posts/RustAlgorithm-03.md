@@ -1,8 +1,8 @@
 ---
 feature: true
-title: Rust 数据结构与算法(3) | 搜索
+title: Rust 数据结构与算法(3) | 图与搜索
 date: 2025-03-26 18:00:00
-abstracts: 在这一节中, 我们将完成三道关于搜索的算法题, 分别是二叉搜索树, 广度优先搜索, 和深度优先搜索
+abstracts: 图与搜索算法密不可分, 例如广度优先搜索(BFS)和深度优先搜索(DFS)是两种最基本的图遍历算法, 它们构成了许多高级图算法的基础. 所以在这一节中, 我们将会先讲解图这个概念, 然后实现三种搜索算法
 tags:
     - Rust
 categories:
@@ -10,144 +10,163 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-在这一节中, 我们将完成三道关于搜索的算法题, 分别是二叉搜索树, 广度优先搜索, 和深度优先搜索
+**图(Graph)** 与搜索算法密不可分, 例如 **广度优先搜索(BFS)** 和 **深度优先搜索(DFS)** 是两种最基本的图遍历算法, 它们构成了许多高级图算法的基础. 首先我们来认识一下图. 简单来说, 图就类似于地图, 有地点, 地点和地点之间有路径连接
 
-# 二叉搜索树 (Binary Search Tree, BST)
+图是由 **顶点(Vertex)和边(Edge)** 组成的非线性数据结构, 数学表示为 `G = (V, E)`, 其中
 
-有了前面学堆排序的经验, 对二叉树的概念应该有一定了解了
+- `V` 是顶点集合 (在代码中用 `usize` 索引表示)
+- `E` 是连接顶点的边集合
 
-二叉搜索树是一种特殊的二叉树数据结构, 其中每个节点都满足以下性质
+常见的图结构包括
 
-- 左子树中所有节点的值都小于当前节点的值
-- 右子树中所有节点的值都大于当前节点的值
-- 左右子树也分别是二叉搜索树
+- 无向图: 没有方向, 比如社交关系都是相互的
+- 有向图: 拥有一个递进的方向, 比如说网页内的链接, 是按顺序层层跳转的
+- 加权图: 边带有权重的图, 比如说在导航软件中, 为了计算最佳路线, 我们就要给每段路经赋予不同的权重
 
-提到二叉就会提到分而治之的思想, 二叉搜索树具有以下特点
+常用的用于表示图的结构包括
 
-- 高效查找: 平均时间复杂度为 O(log n), 比线性结构更高效
-- 动态数据维护: 可以高效地插入和删除数据
-- 有序数据存储: 中序遍历BST可以得到有序序列
-- 作为更复杂数据结构的基础: 如 AVL 树, 红黑树等都是基于 BST 的扩展
+- 邻接表(Adjacency List): 为每个顶点存储一个列表, 记录与之相连的顶点
+- 邻接矩阵(Adjacency Matrix): 使用二维数组表示顶点之间的连接关系
+- 边列表(Edge List)：简单地存储所有边的列表
 
-二叉搜索树在数据库索引, 文件系统目录结构, 内存中的有序数据存储, 路由算法中的路由表都有很多应用
+我们说图与搜索联系紧密, 为什么图需要搜索? 图的搜索算法用于系统地探索图中的节点和边, 主要解决以下问题
 
-下面我们来从零实现一个二叉搜索树
+- 检查图中是否存在特定节点
+- 查找从一个节点到另一个节点的路径
+- 检查图的连通性
+- 发现图的结构特性
 
-那么首先肯定是数据结构, 二叉搜索树的节点类似于双链表, 为了在编译时确定数据类型大小, 我们同样需要使用智能指针将数据分配到堆上, 只不过这次我们不使用 `NonNull`, 而是 `Box` 智能指针, 之前说过, 它是一个胖指针, 存储了更多的元信息, 表示唯一所有权, 适合表示树节点的父子关系, 即父节点销毁时子节点一并销毁. 总之树结构天然适合所有权语义, 不需要频繁的节点共享, 并且使用 `Box` 实现简单且安全
+所有图搜索算法都遵循一个通用模式
+
+- 从起始节点开始
+- 逐步"发现"相邻节点
+- 记录已访问节点避免重复
+- 按照特定策略选择下一个要访问的节点, 例如下面我们会讲的深度优先和广度优先
+
+那么下面让我们简单实现一个图, 以及图的相关函数
+
+## 基本数据结构
 
 ```rs
-#[derive(Debug)]
-struct TreeNode<T>
-where
-    // 要求我们的元素是可排序的
-    T: Ord,
-{
-    value: T,
-    left: Option<Box<TreeNode<T>>>,
-    right: Option<Box<TreeNode<T>>>,
-}
-
-impl<T> TreeNode<T>
-where
-    T: Ord,
-{
-    fn new(value: T) -> Self {
-        TreeNode {
-            value,
-            left: None,
-            right: None,
-        }
-    }
+pub struct UndirectedGraph {
+    adjacency_table: HashMap<String, Vec<(String, i32)>>,
 }
 ```
 
-类似链表, 我们也需要一个结构来表示树根
+这是一种加权无向图, `HashMap` 的键是节点名称 (`String`), 值是该节点的邻接表, 存储了相邻节点和边的权重 (`Vec<(String, i32)>`)
+
+然后题目定义了一个图的通用 Trait
 
 ```rs
-#[derive(Debug)]
-struct BinarySearchTree<T>
-where
-    T: Ord,
-{
-    root: Option<Box<TreeNode<T>>>,
-}
-
-impl<T> BinarySearchTree<T>
-where
-    T: Ord,
-{
-    fn new() -> Self {
-        BinarySearchTree { root: None }
+pub trait Graph {
+    // 基本功能, 新建, 获得可变邻接表或不可变邻接表
+    fn new() -> Self;
+    fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>>;
+    fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>>;
+    // 添加节点和边, 需要我们实现
+    fn add_node(&mut self, node: &str) -> bool {
+        //TODO
     }
-}
-```
-
-基本结构并不复杂, 接下来我们为其实现插入和搜索这两个最基本的功能, 至于修改和删除, 就交给读者自行实现
-
-我们首先为树节点实现这两个功能, 因为树根本质上就是树节点的包装
-
-```rs
-use std::cmp::Ordering;
-
-// impl TreeNode
-fn insert(&mut self, value: T) {
-    //TODO
-    // 逻辑很清晰, 就像我们之前说的那样, 小值往左走, 大值往右走
-    match value.cmp(&self.value) {
-        Ordering::Less => {
-            // 存在则递归调用
-            if let Some(ref mut left) = self.left {
-                left.insert(value);
-            // 不存在就直接插入
-            } else {
-                self.left = Some(Box::new(TreeNode::new(value)));
+    fn add_edge(&mut self, edge: (&str, &str, i32)) {
+        //TODO
+    }
+    // 图是否包含节点
+    fn contains(&self, node: &str) -> bool {
+        self.adjacency_table().get(node).is_some()
+    }
+    // 获得所有节点
+    fn nodes(&self) -> HashSet<&String> {
+        self.adjacency_table().keys().collect()
+    }
+    // 获得所有的边
+    fn edges(&self) -> Vec<(&String, &String, i32)> {
+        let mut edges = Vec::new();
+        for (from_node, from_node_neighbours) in self.adjacency_table() {
+            for (to_node, weight) in from_node_neighbours {
+                edges.push((from_node, to_node, *weight));
             }
         }
-        Ordering::Greater => {
-            if let Some(ref mut right) = self.right {
-                right.insert(value);
-            } else {
-                self.right = Some(Box::new(TreeNode::new(value)));
-            }
-        }
-        Ordering::Equal => {
-            // 重复值处理: 这里我们选择不插入重复值
-            // 也可以根据需求选择其他处理方式
-        }
-    }
-}
-
-// 辅助函数
-// 递归查找节点
-fn search(&self, value: T) -> bool {
-    // 搜索也是同理, 小值去左边找, 大值去右边找
-    match value.cmp(&self.value) {
-        Ordering::Less => self.left.as_ref().map_or(false, |left| left.search(value)),
-        Ordering::Greater => self.right.as_ref().map_or(false, |right| right.search(value)),
-        Ordering::Equal => true,
+        edges
     }
 }
 ```
 
-然后我们只需要为上层包装也实现这两个功能即可
+注意, 题目中还给了一个用于错误处理的结构体
 
 ```rs
-fn insert(&mut self, value: T) {
-    //TODO
-    if let Some(ref mut root) = self.root {
-        root.insert(value);
+use std::fmt;
+#[derive(Debug, Clone)]
+pub struct NodeNotInGraph;
+impl fmt::Display for NodeNotInGraph {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "accessing a node that is not in the graph")
+    }
+}
+```
+
+然后我们的题目以及为无向图实现了这个 Trait
+
+```rs
+impl Graph for UndirectedGraph {
+    fn new() -> UndirectedGraph {
+        UndirectedGraph {
+            adjacency_table: HashMap::new(),
+        }
+    }
+    fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>> {
+        &mut self.adjacency_table
+    }
+    fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>> {
+        &self.adjacency_table
+    }
+}
+```
+
+我们现在的策略是节点不存在时自动创建节点, 至于错误处理的版本读者可以自行实现
+
+而且既然题目在 Trait 中留的不是函数签名, 而是带有花括号的, 那我们就在 Trait 中实现这个默认方法
+
+```rs
+fn add_node(&mut self, node: &str) -> bool {
+    // 检查是否存在节点, 不存在就自动创建
+    if self.contains(node) {
+        false
     } else {
-        self.root = Some(Box::new(TreeNode::new(value)));
+        self.adjacency_table_mutable()
+            .insert(node.to_string(), Vec::new());
+        true
     }
 }
+fn add_edge(&mut self, edge: (&str, &str, i32)) {
+    // 边的信息, 两个节点, 一个权重
+    let (node1, node2, weight) = edge;
 
-fn search(&self, value: T) -> bool {
-    //TODO
-    self.root.as_ref().map_or(false, |root| root.search(value))
+    // 确保两个节点都存在
+    if !self.contains(node1) {
+        self.add_node(node1);
+    }
+    if !self.contains(node2) {
+        self.add_node(node2);
+    }
+
+    // 获取邻接表可变引用
+    let adj_table = self.adjacency_table_mutable();
+
+    // 添加 node1 -> node2 的边
+    adj_table
+        .get_mut(&node1.to_string())
+        .unwrap()
+        .push((node2.to_string(), weight));
+
+    // 添加 node2 -> node1 的边 (因为我们是无向图, 两边不能感知到对方是否连接, 所以需要互相连线)
+    adj_table
+        .get_mut(&node2.to_string())
+        .unwrap()
+        .push((node1.to_string(), weight));
 }
 ```
 
-就像我们说的, 二叉搜索树非常的简单, 但也非常的基础
+只要理解了图的结构, 这并不难, 我们已经实现了一个基本的图, 不过它也只是个图, 还没有任何功能. 下面让我们学习一些搜索算法
 
 # 广度优先搜索 (Breadth-First Search, BFS)
 
@@ -178,26 +197,11 @@ struct Graph {
 }
 ```
 
-结构非常简单, 但是又有点看不懂为什么要这样, 下面我们来解释一些
-
-在解释它之前先解释一下上层概念, 什么是 **图(Graph)**? 简单来说, 图就类似于地图, 有地点, 地点和地点之间有路径连接
-
-图是由 **顶点(Vertex)和边(Edge)** 组成的非线性数据结构, 数学表示为 `G = (V, E)`, 其中
-
-- `V` 是顶点集合 (在代码中用 `usize` 索引表示)
-- `E` 是连接顶点的边集合
-
-常见的图结构包括
-
-- 无向图: 没有方向, 比如社交关系都是相互的
-- 有向图: 拥有一个递进的方向, 比如说网页内的链接, 是按顺序层层跳转的
-- 加权图: 边带有权重的图, 比如说在导航软件中, 为了计算最佳路线, 我们就要给每段路经赋予不同的权重
-
-有了这些基本认识, 现在介绍一下我们上面的数据结构, 这种结构称为 **邻接表(Adjacency List)**
+还记得我们之前讲过的图吗, 这其实就是 **邻接表(Adjacency List)**
 
 - 外层 Vec 的索引代表节点 ID (如节点 0, 1, 2...)
 - 每个内层 Vec 只存储实际存在的边, 适合稀疏图
-- 对比邻接矩阵(你可以理解为一个二维坐标平面), 存储了所有可能的点, 节省大量内存
+- 对比邻接矩阵, 存储了所有可能的点, 节省大量内存
 - 对比边列表(`Vec<(usize, usize)>`)又能提高查询效率
 
 这里给一个简单的示例
@@ -347,3 +351,144 @@ fn dfs_util(&self, v: usize, visited: &mut HashSet<usize>, visit_order: &mut Vec
 ```
 
 主要内容都体现在注释里了, 读者可以自行实现一个迭代的方案
+
+# 二叉搜索树 (Binary Search Tree, BST)
+
+学习了两种图搜索算法, 我们再来看一中特殊的, 基于二叉树的
+
+有了前面学堆排序的经验, 对二叉树的概念应该有一定了解了
+
+二叉搜索树是一种特殊的二叉树数据结构, 其中每个节点都满足以下性质
+
+- 左子树中所有节点的值都小于当前节点的值
+- 右子树中所有节点的值都大于当前节点的值
+- 左右子树也分别是二叉搜索树
+
+二叉树有节点, 有连线, 其实也像是一个图
+
+提到二叉就会提到分而治之的思想, 二叉搜索树具有以下特点
+
+- 高效查找: 平均时间复杂度为 O(log n), 比线性结构更高效
+- 动态数据维护: 可以高效地插入和删除数据
+- 有序数据存储: 中序遍历BST可以得到有序序列
+- 作为更复杂数据结构的基础: 如 AVL 树, 红黑树等都是基于 BST 的扩展
+
+二叉搜索树在数据库索引, 文件系统目录结构, 内存中的有序数据存储, 路由算法中的路由表都有很多应用
+
+下面我们来从零实现一个二叉搜索树
+
+那么首先肯定是数据结构, 二叉搜索树的节点类似于双链表, 为了在编译时确定数据类型大小, 我们同样需要使用智能指针将数据分配到堆上, 只不过这次我们不使用 `NonNull`, 而是 `Box` 智能指针, 之前说过, 它是一个胖指针, 存储了更多的元信息, 表示唯一所有权, 适合表示树节点的父子关系, 即父节点销毁时子节点一并销毁. 总之树结构天然适合所有权语义, 不需要频繁的节点共享, 并且使用 `Box` 实现简单且安全
+
+```rs
+#[derive(Debug)]
+struct TreeNode<T>
+where
+    // 要求我们的元素是可排序的
+    T: Ord,
+{
+    value: T,
+    left: Option<Box<TreeNode<T>>>,
+    right: Option<Box<TreeNode<T>>>,
+}
+
+impl<T> TreeNode<T>
+where
+    T: Ord,
+{
+    fn new(value: T) -> Self {
+        TreeNode {
+            value,
+            left: None,
+            right: None,
+        }
+    }
+}
+```
+
+类似链表, 我们也需要一个结构来表示树根
+
+```rs
+#[derive(Debug)]
+struct BinarySearchTree<T>
+where
+    T: Ord,
+{
+    root: Option<Box<TreeNode<T>>>,
+}
+
+impl<T> BinarySearchTree<T>
+where
+    T: Ord,
+{
+    fn new() -> Self {
+        BinarySearchTree { root: None }
+    }
+}
+```
+
+基本结构并不复杂, 接下来我们为其实现插入和搜索这两个最基本的功能, 至于修改和删除, 就交给读者自行实现
+
+我们首先为树节点实现这两个功能, 因为树根本质上就是树节点的包装
+
+```rs
+use std::cmp::Ordering;
+
+// impl TreeNode
+fn insert(&mut self, value: T) {
+    //TODO
+    // 逻辑很清晰, 就像我们之前说的那样, 小值往左走, 大值往右走
+    match value.cmp(&self.value) {
+        Ordering::Less => {
+            // 存在则递归调用
+            if let Some(ref mut left) = self.left {
+                left.insert(value);
+            // 不存在就直接插入
+            } else {
+                self.left = Some(Box::new(TreeNode::new(value)));
+            }
+        }
+        Ordering::Greater => {
+            if let Some(ref mut right) = self.right {
+                right.insert(value);
+            } else {
+                self.right = Some(Box::new(TreeNode::new(value)));
+            }
+        }
+        Ordering::Equal => {
+            // 重复值处理: 这里我们选择不插入重复值
+            // 也可以根据需求选择其他处理方式
+        }
+    }
+}
+
+// 辅助函数
+// 递归查找节点
+fn search(&self, value: T) -> bool {
+    // 搜索也是同理, 小值去左边找, 大值去右边找
+    match value.cmp(&self.value) {
+        Ordering::Less => self.left.as_ref().map_or(false, |left| left.search(value)),
+        Ordering::Greater => self.right.as_ref().map_or(false, |right| right.search(value)),
+        Ordering::Equal => true,
+    }
+}
+```
+
+然后我们只需要为上层包装也实现这两个功能即可
+
+```rs
+fn insert(&mut self, value: T) {
+    //TODO
+    if let Some(ref mut root) = self.root {
+        root.insert(value);
+    } else {
+        self.root = Some(Box::new(TreeNode::new(value)));
+    }
+}
+
+fn search(&self, value: T) -> bool {
+    //TODO
+    self.root.as_ref().map_or(false, |root| root.search(value))
+}
+```
+
+就像我们说的, 二叉搜索树非常的简单, 但也非常的基础
