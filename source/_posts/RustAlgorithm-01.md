@@ -148,6 +148,8 @@ impl<T> LinkedList<T> {
 }
 ```
 
+### 添加一些基本方法
+
 这些很基础, 我们就不去解释了, 接下来给 `LinkedList` 添加更多方法
 
 ```rs
@@ -195,6 +197,8 @@ fn get_ith_node(&mut self, node: Option<NonNull<Node<T>>>, index: i32) -> Option
 
 以上就是题目中已经给出的内容, 其他与链表无关的辅助功能这里就不写了, 比如格式化输出
 
+### 合并有序单链表
+
 然后就是我们算法教程的第一道题了, **合并两个有序单链表成一个新的有序单链表**
 
 首先给出一种简单的方案, 既然提供了 `add` 函数, 那我们就借来用一下
@@ -202,10 +206,10 @@ fn get_ith_node(&mut self, node: Option<NonNull<Node<T>>>, index: i32) -> Option
 ```rs
 pub fn merge(list_a: LinkedList<T>, list_b: LinkedList<T>) -> Self
     // 合并要求我们的数据是可比较的
-    where
-        T: std::cmp::PartialOrd,
-    {
-    let mut merged_list = LinkedList::new();
+where
+    T: std::cmp::PartialOrd,
+{
+    let mut merged = LinkedList::new();
 
     // 封装获取节点值和移动节点的逻辑, 最小化 unsafe
     let get_val = |node_ptr: NonNull<Node<T>>| unsafe { &(*node_ptr.as_ptr()).val };
@@ -226,17 +230,17 @@ pub fn merge(list_a: LinkedList<T>, list_b: LinkedList<T>) -> Self
             // 这里直接获取值
             let (val, next) = take_next(a_node);
             // 使用提供的函数
-            merged_list.add(val);
+            merged.add(val);
             a_ptr = next;
         } else {
             let (val, next) = take_next(b_node);
-            merged_list.add(val);
+            merged.add(val);
             b_ptr = next;
         }
     }
 
     // 处理剩余节点
-    let process_remaining = |merged: &mut LinkedList<T>, mut ptr| {
+    let mut process_remaining = |mut ptr| {
         while let Some(node) = ptr {
             let (val, next) = take_next(node);
             merged.add(val);
@@ -245,10 +249,10 @@ pub fn merge(list_a: LinkedList<T>, list_b: LinkedList<T>) -> Self
     };
 
     // 循环 a, b 剩余的内容
-    process_remaining(&mut merged_list, a_ptr);
-    process_remaining(&mut merged_list, b_ptr);
+    process_remaining(a_ptr);
+    process_remaining(b_ptr);
 
-    merged_list
+    merged
 }
 ```
 
@@ -302,6 +306,8 @@ pub fn merge(list_a: LinkedList<T>, list_b: LinkedList<T>) -> Self
 ```
 
 逻辑比较清晰, 关键内容写在注释里了
+
+### 为链表实现一些其他功能
 
 完成了我们的习题, 对于链表, 我们可以再实现一些其他功能 -- 最经典的 **增删改查 (CRUD)**
 
@@ -456,6 +462,118 @@ fn test_crud() {
     assert_eq!(list.length, 4);
 }
 ```
+
+### 链表的迭代器
+
+对于数组, 向量, 哈希表这些类型, 我们都经常使用迭代器这个结构, 函数式写起来又爽又高效, 但实际上是标准库在背后做了大量工作. 其实我们也可以为链表尝试实现一些迭代器
+
+```rs
+// 不可变迭代器
+pub struct LinkedListIter<'a, T> {
+    current: Option<NonNull<Node<T>>>,
+    _marker: std::marker::PhantomData<&'a Node<T>>,
+}
+
+impl<'a, T> Iterator for LinkedListIter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current.map(|node| unsafe {
+            let node_ref = &*node.as_ptr();
+            self.current = node_ref.next;
+            &node_ref.val
+        })
+    }
+}
+
+// 可变迭代器
+pub struct LinkedListIterMut<'a, T> {
+    current: Option<NonNull<Node<T>>>,
+    _marker: std::marker::PhantomData<&'a mut Node<T>>,
+}
+
+impl<'a, T> Iterator for LinkedListIterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current.map(|node| unsafe {
+            let node_ref = &mut *node.as_ptr();
+            self.current = node_ref.next;
+            &mut node_ref.val
+        })
+    }
+}
+```
+
+这两个迭代器就可以允许我们使用 `for` 循环来遍历或修改链表的值了.
+
+除此之外, 对于有序链表的合并, 我们知道, 链表不同于数组, 链表中插入元素是十分高效的, 因此我们也可以通过向其中一个链表有条件的插入另一个链表来做到这个功能. 这里也可以使用迭代器辅助一下
+
+```rs
+// 消耗迭代器
+pub struct LinkedListIntoIter<T> {
+    current: Option<NonNull<Node<T>>>,
+}
+
+impl<T> Iterator for LinkedListIntoIter<T> {
+    type Item = NonNull<Node<T>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.current.map(|node| unsafe {
+            let next = (*node.as_ptr()).next;
+            (*node.as_ptr()).next = None; // 断开连接
+            self.current = next;
+            node
+        })
+    }
+}
+
+// impl LinkedList
+
+fn into_iter(self) -> LinkedListIntoIter<T> {
+    LinkedListIntoIter {
+        current: self.start,
+    }
+}
+
+fn append_node(&mut self, node: NonNull<Node<T>>) {
+    unsafe{ (*node.as_ptr()).next = None };
+    match self.end {
+        None => self.start = Some(node),
+        Some(end) => unsafe{ (*end.as_ptr()).next = Some(node) },
+    }
+    self.end = Some(node);
+    self.length += 1;
+}
+
+pub fn merge(&mut self, other: LinkedList<T>) where T: PartialOrd {
+    let mut other_iter = other.into_iter();
+    let mut current = &mut self.start;
+
+    while let Some(self_node) = current.as_ref().map(|n| unsafe { &*n.as_ptr() }) {
+        if let Some(other_node_ptr) = other_iter.current {
+            unsafe {
+                if (*other_node_ptr.as_ptr()).val <= self_node.val {
+                    // 插入 other 的节点到当前节点前
+                    let other_node = other_iter.next().unwrap();
+                    (*other_node.as_ptr()).next = *current;
+                    *current = Some(other_node);
+                    self.length += 1;
+                    continue;
+                }
+            }
+        }
+        current = unsafe { &mut (*current.unwrap().as_ptr()).next };
+    }
+
+    // 处理剩余的 other 节点
+    for node in other_iter {
+        self.append_node(node);
+    }
+}
+```
+
+有人可能会问为什么不同时把被更新的链表也作为迭代器, 这是因为由于所有权和借用规则, 以及防止结构被破坏, 我们不能在迭代迭代器的同时插入或删除元素
 
 ## 双链表
 
