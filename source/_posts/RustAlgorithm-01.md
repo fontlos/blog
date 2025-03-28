@@ -30,7 +30,7 @@ cover: https://fontlos.com/cover/ferris.png
 
 ## 单链表
 
-从简单的单链表开始, 单链表顾名思义, 单项排列, 每个节点仅包含指向下一节点的指针
+从简单的单链表开始, 单链表顾名思义, 单向排列, 每个节点仅包含指向下一节点的指针
 
 包含以下内容
 
@@ -102,7 +102,7 @@ struct LinkedList<T> {
     - 当确实有下一个节点时, 使用 `Some(non_null_ptr)`
     - 没有下一个节点时, 使用 `None`
 
-- 内存表示层面: 通过 Option 包装 + 空指针优化，实现零成本抽象
+- 内存表示层面: 通过 Option 包装 + 空指针优化, 实现零成本抽象
     - `Option<NonNull>` 会被优化为直接用 `null` 指针表示 `None`
     - 非 `null` 指针表示 `Some`
 
