@@ -41,7 +41,7 @@ cover: https://fontlos.com/cover/ferris.png
 
 在构建数据结构之前先来认识一个智能指针
 
-`NonNull<T>` 是 Rust 标准库提供的一个智能指针类型, 它表示一个**非空的**, **协变的(raw)** 指针
+`NonNull<T>` 是 Rust 标准库提供的一个智能指针类型, 它表示一个**非空的**, **协变的(covariant)** 指针
 
 核心特性
 
@@ -51,6 +51,12 @@ cover: https://fontlos.com/cover/ferris.png
 
 2. **协变性**: `NonNull<T>` 对于 `T` 是协变的, 而 `*mut T` 是不变的. 这使得它在构建协变类型时更有用, 但也增加了误用的风险
     - **协变**: 如果 `A` 是 `B` 的子类型, 那么 `F<A>` 是 `F<B>` 的子类型
+    ```rs
+    fn example<'short>(x: NonNull<&'short i32>) -> NonNull<&'static i32> {
+        x // 可以安全转换，因为 NonNull 是协变的
+        // 所以对于链表来说提供了 生命周期灵活性, 允许链表自然地处理不同生命周期的元素
+    }
+    ```
     - 同理还有 **不变性** 和 **逆变性**
     - 协变性使得构建如 `Box, Rc` 等容器类型更灵活, 但需要确保类型安全
 
