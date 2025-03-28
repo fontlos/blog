@@ -52,13 +52,18 @@ cover: https://fontlos.com/cover/ferris.png
 2. **协变性**: `NonNull<T>` 对于 `T` 是协变的, 而 `*mut T` 是不变的. 这使得它在构建协变类型时更有用, 但也增加了误用的风险
     - **协变**: 如果 `A` 是 `B` 的子类型, 那么 `F<A>` 是 `F<B>` 的子类型
     ```rs
-    fn example<'short>(x: NonNull<&'static i32>) -> NonNull<&'short i32> {
+    fn example1<'short>(x: *mut &'static i32) -> *mut &'short i32 {
+        // x // 错误!
+        x as *mut &'short i32 // 正确, 需要显式转换
+    }
+    fn example2<'short>(x: NonNull<&'static i32>) -> NonNull<&'short i32> {
         x // 可以安全转换，因为 NonNull 是协变的
         // 所以对于链表来说提供了 生命周期灵活性, 允许链表自然地处理不同生命周期的元素
     }
     ```
     - 同理还有 **不变性** 和 **逆变性**
     - 协变性使得构建如 `Box, Rc` 等容器类型更灵活, 但需要确保类型安全
+    - 在我们的链表实现中也会为我们节省大量的生命周期标注和显式生命周期转换
 
 3. **内存布局**: 由于 **空指针优化**, `Option<NonNull<T>>` 和 `NonNull<T>` 具有相同的大小和对齐方式
     - 空指针优化: 由于 `NonNull<T>` 保证不为 `null`, 编译器可以将 `Option::None` 表示为 `null` 指针, 而不需要额外的判别式
