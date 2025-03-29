@@ -1,5 +1,5 @@
 ---
-feature: true
+feature: false
 title: Rust 数据结构与算法(1) | 链表
 date: 2025-03-26 13:00:00
 abstracts: 这是一个非计算机专业的 Rust 数据结构与算法教程, 基于 LearningOS/rustling-classroom-2025s-rustling-25S-template 的十道算法题. 在这一节中, 将介绍链表的构建与合并链表的算法

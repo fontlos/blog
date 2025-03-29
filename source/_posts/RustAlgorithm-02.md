@@ -1,5 +1,5 @@
 ---
-feature: true
+feature: false
 title: Rust 数据结构与算法(2) | 排序
 date: 2025-03-26 16:00:00
 abstracts: 排序是值得单开一节的内容, 因为排序方案种类众多, 思路也比较复杂, 在这一节将介绍冒泡排序, 插入排序, 快速排序, 堆排序, 以及一个简化版的 TimSort
