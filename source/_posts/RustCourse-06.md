@@ -1,8 +1,8 @@
 ---
 feature: false
-title: 初识 Rust(6) | 方法, 泛型, Trait, 生命周期, 集合类型
+title: 初识 Rust(6) | 方法, 泛型, Trait, 集合类型
 date: 2021-06-08 20:32:17
-abstracts: 为类型实现方法. 如何使用泛型类型, 认识 Trait 和 Trait Object, 初步了解生命周期. 介绍集合类型, 动态数组, 基于动态数组的可变长度字符串, KV 存储.
+abstracts: 为类型实现方法. 如何使用泛型类型, 认识 Trait 和 Trait Object. 介绍集合类型, 动态数组, 基于动态数组的可变长度字符串, KV 存储.
 tags:
     - Rust
 categories:
