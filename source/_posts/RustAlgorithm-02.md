@@ -1,8 +1,8 @@
 ---
 feature: false
-title: Rust 数据结构与算法(2) | 排序
+title: Rust 数据结构与算法(2) | 堆
 date: 2025-03-26 16:00:00
-abstracts: 排序是值得单开一节的内容, 因为排序方案种类众多, 思路也比较复杂, 在这一节将介绍冒泡排序, 插入排序, 快速排序, 堆排序, 以及一个简化版的 TimSort
+abstracts: 堆是一种特殊的完全二叉树数据结构, 在这一节中, 我们将实现一种底层的二叉堆, 学习什么是堆化, 并可以自由选择是最大堆还是最小堆模式, 在后续的排序算法课程中也将基于此实现一个简单的堆排序
 tags:
     - Rust
 categories:
@@ -10,346 +10,336 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-排序是值得单开一节的内容, 因为排序方案种类众多, 思路也比较复杂, 在这一节将介绍冒泡排序, 插入排序, 快速排序, 堆排序, 以及一个简化版的 TimSort
+# 堆
 
-# 冒泡排序 (Bubble Sort)
+堆是一种特殊的完全二叉树数据结构, 在这一节中, 我们将实现一种底层的二叉堆, 学习什么是堆化, 并可以自由选择是最大堆还是最小堆模式, 在后续的排序算法课程中也将基于此实现一个简单的堆排序
 
-这可以说是思路上最简单的排序方案之一了 (睡眠排序和猴子排序这种异类不算)
-
-冒泡排序通过重复地遍历要排序的列表, 比较相邻元素并交换它们的位置 (如果顺序错误) 来工作, 这个过程重复进行, 直到列表被排序
-
-```rs
-fn bubble_sort<T: Ord>(array: &mut [T]) {
-    for i in 0..array.len() {  // 外层循环控制排序轮数
-        for j in 0..array.len() - i - 1 {  // 内层循环控制每轮比较次数
-            if array[j] > array[j + 1] {  // 如果前一个元素大于后一个
-                array.swap(j, j + 1);    // 交换它们的位置
-            }
-        }
-    }
-}
-```
-
-- 外层循环: 控制排序轮数, 每轮会将当前最大的元素 **冒泡** 到正确位置
-- 内层循环: 比较相邻元素, 将较大的元素向后移动
-
-时间复杂度为 O(n²)
-
-# 插入排序 (Insertion Sort)
-
-插入的思想也很简单, 冒泡是将最大的元素放到正确的未知, 插入是将当前元素放到相对正确的位置, 通过构建有序序列, 对于未排序数据, 在已排序序列中从后向前扫描, 找到相应位置并插入
-
-```rs
-fn insertion_sort<T: Ord>(array: &mut [T]) {
-    for i in 1..array.len() {  // 从第二个元素开始 (索引1)
-        let mut j = i;  // j 是当前要插入的元素位置
-        while j > 0 && array[j] < array[j - 1] {  // 当前元素比前一个小
-            array.swap(j, j - 1);  // 交换它们
-            j -= 1;  // 继续向前比较
-        }
-    }
-}
-```
-
-- 外层循环: 遍历每个待插入的元素, 假定 0 号位置就是最初的的有序部分
-- 内层循环: 将当前元素与已排序部分比较并交换, 直到找到正确位置
-
-时间复杂度为 O(n²)
-
-# 快速排序 (Quick Sort)
-
-这是一个经典且常用的排序方案, 到了这以后, 算法开始上难度了
-
-核心思想是 **分而治之**: 选择一个 "基准" 元素, 将数组分为两个子数组, 小于基准的和大于基准的, 然后递归排序子数组, 递归的过程就是继续分治的过程
-
-```rs
-fn quick_sort<T: Ord>(array: &mut [T]) {
-    if array.len() <= 1 {  // 基本情况: 空数组或单元素数组已排序
-        return;
-    }
-    let pivot = partition(array);  // 获取基准位置
-    quick_sort(&mut array[..pivot]);  // 递归排序左半部分
-    quick_sort(&mut array[pivot + 1..]);  // 递归排序右半部分
-}
-
-fn partition<T: Ord>(array: &mut [T]) -> usize {
-    let pivot = array.len() - 1;  // 选择最后一个元素作为基准
-    let mut i = 0;  // i 是小于基准的元素的边界, 为了避免每次都移动基准
-    for j in 0..pivot {  // 遍历除基准外的所有元素
-        if array[j] <= array[pivot] {  // 当前元素小于等于基准
-            array.swap(i, j);  // 把它放到i的位置
-            i += 1;  // 移动i边界
-        }
-    }
-    array.swap(i, pivot);  // 把基准放到正确位置
-    i  // 返回基准的最终位置
-}
-```
-
-`partition` 函数: 将数组分为两部分, 返回基准的最终位置
-`quick_sort` 递归: 对左右两部分分别递归排序
-`array.swap(i, j)`: 交换元素位置以维持分区不变式
-
-时间复杂度：平均 O(nlogn), 最坏 O(n²) (当分区极度不平衡时)
-
-# 堆排序 (Heap Sort)
-
-我先用尽可能通俗易懂的方式解释一下堆排序
-
-假如这里有一些大小不一的球, 我们尝试给球按大小排序, 首先我们把这些球堆在一起(**构建堆**), 像一个金字塔(**最大堆**), 最大的球总是在最上面(**大顶堆排序**, 同样的你也可以构建小顶堆)
-
-然后(**开始排序**), 把最上面的球(**最大值**)拿走, 放到一边. 把最后一个球放到最上面(**交换最大值与数组末尾**), 重新调整球堆(**待排序数组长度减一**), 让最大的球再次位于最上面, 重复这个过程
-
-堆排序就是利用堆这种数据结构: 首先构建最大堆, 然后重复从堆中提取最大元素放到数组末尾
-
-然后先解释几个专有名词
-
-- **堆(Heap)**: 一种树形结构, 最大堆指每个父节点都比子节点大, 我们这里使用 **二叉堆**, 即个父节点至多有两个子节点
+- **堆(Heap)**: 一种树形结构, 我们这里是 **二叉堆**, 即个父节点至多有两个子节点
 - **堆化(Heapify)**: 调整堆使其满足堆的性质
+    - **最大堆(max-heap)**: 每个节点的值都大于或等于其子节点的值
+    - **最小堆(min-heap)**: 每个节点的值都小于或等于其子节点的值
 - **父/子节点**: 这个很好理解, 树型结构中上层是父节点, 下层是子节点
 
+堆通常用数组来实现, 因为完全二叉树的特性使得我们可以用简单的索引关系来表示父子节点关系
+
+核心操作
+
+- 插入(Add): `O(log n)`
+- 删除(Next/Extract): `O(log n)`
+- 查看堆顶(Peek): `O(1)`
+
+索引计算: 我们这里以 0 为根节点, 所以实际计算中看上去少加了 1, 以及我们默认不使用 0 号位置, 直接用 0 占位
+
+- 父节点索引: `parent_idx = idx / 2`
+- 左子节点索引: `left_child_idx = idx * 2`
+- 右子节点索引: `right_child_idx = idx * 2 + 1`
+
+维护堆的性质关键就在于 **上浮(Swim)** 和 **下沉 (Sink)** 操作, 就是让我们需要的元素按某种顺序向上移动或向下移动
+
+至于堆的常见应用, 除开堆排序外, 还有
+
+- 优先队列实现: 一种抽象数据类型, 每个元素都有优先级, 优先级高的元素先出队
+- 图算法中的 Dijkstra(最短路径) 和 Prim(最小生成树) 算法
+- 求 Top K 问题: 从海量数据中找出前 K 大/小的元素
+- 中位数查找问题: 两个堆, 最大堆存较小的一半数, 最小堆存较大的一半数, 保持两堆大小平衡 (差值≤1). 若两堆大小相等, 取两个堆顶的平均值, 否则取元素多的那个堆的堆顶
+
+## 基本数据结构
+
 ```rs
-// 这次我们先看辅助函数, 负责将数组的一部分 "堆化"
-fn heapify<T: Ord>(array: &mut [T], root: usize, end: usize) {
-    let mut largest = root;  // 假设根节点最大
-    // 因为通常来说, 每层元素的个数是上一层的两倍, 所以上层节点的序号的二倍就是本层节点序号的开始
-    // 通过 +1 和 +2 获得本层两个节点的索引
-    // 这相当于将一个二叉堆平铺在数组上
-    let left = 2 * root + 1;  // 左子节点索引
-    let right = 2 * root + 2;  // 右子节点索引
-
-    // 我们只处理这一层, 用 end 作为边界
-    // 找出 root, left, right 中最大的
-    if left < end && array[left] > array[largest] {
-        largest = left;
-    }
-    if right < end && array[right] > array[largest] {
-        largest = right;
-    }
-
-    if largest != root {  // 如果最大不是 root
-        array.swap(root, largest);  // 交换它们
-        heapify(array, largest, end);  // 递归堆化受影响的子树
-    }
-}
-
-fn heap_sort<T: Ord>(array: &mut [T]) {
-    if array.len() <= 1 {  // 基本情况
-        return;
-    }
-
-    // 在这里, 我们相对于把数组结构视为一颗无序二叉树
-    // 构建最大堆
-    for i in (0..array.len() / 2).rev() {  // 从最后一个非叶子节点开始
-        heapify(array, i, array.len());  // 堆化
-    }
-
-    // 提取元素
-    for i in (1..array.len()).rev() {  // 从后往前
-        array.swap(0, i);  // 把当前最大元素放到数组末尾
-        heapify(array, 0, i);  // 对剩余元素重新堆化
-    }
+pub struct Heap<T>
+where
+    T: Default,
+{
+    count: usize,   // 元素数量
+    items: Vec<T>,  // 实际存储
+    comparator: fn(&T, &T) -> bool, // 比较函数, 用于决定是最大堆还是最小堆
 }
 ```
 
-- `heapify` 函数: 维护堆的性质, 确保父节点大于子节点
-- 构建堆: 从最后一个非叶子节点开始向前堆化
-- 排序阶段: 重复提取最大元素并堆化剩余部分
-
-时间复杂度: O(nlogn)
-
-然后我们再用实际例子分析一下这个过程, 先介绍排序函数, 因为一旦理解了排序函数, 通过层层递归, 堆化函数一定能变成给一个仅包含一个父节点和至多两个子节点的堆进行堆化
-
-前几行不用解释, 从构建最大堆开始, 首先是如何找到最后一个非叶子节点, 所谓叶子节点就是没有子节点的节点, 举个例子, 假设我们有这样一个数组
-
-```
-[3, 7, 5, 9, 4, 8, 2]
-```
-
-我们直接按数组顺序将其视作二叉树
-
-```
-        3
-      /   \
-     7     5
-    / \   / \
-   9   4 8   2
-```
-
-对于最后一个节点 `n-1` (这里 n 为 7, 所以我们的索引为 6), 我们可以计算它的父节点, 也就是最后一个非叶子节点 `(n-2)/2`(注意这里是整数除法, 四舍五入) (对应索引 2, 对应数据 `5`)
-
-至于为什么这样计算, 假设最后一个非叶子节点有两个子节点, 那么根据计算公式就可以知道, 它的父节点是 `(n-2)/2`, 如果最后一个非叶子节点有一个子节点, 那么我们可以知道 `(n-1)/2` 才是正确结果, 可是由于四舍五入, `(n-1)/2 = (n-2)/2 + 1/2`, 那么 `(n-2)/2` 比正确结果少了 `1/2`, 但正好可以通过四舍五入得到正确结果. 因此无论如何, `n/2 - 1` 都将正确的得到最后一个非叶子节点, 又因为 `..` 不包含结束值, 所以 `(0..array.len() / 2).rev()` 就将从最后一个非叶子节点开始逆序迭代
-
-我们找到了最后一个非叶子节点, 这里索引是 2, 对应数据 `5`, 我们先对这个节点进行堆化. 发现左子节点更大, 交换得到
-
-```
-        3
-      /   \
-     7     8
-    / \   / \
-   9   4 5   2
-```
-
-然后对上一个节点, 索引为 1, 对应数据 `7`, 进行堆化, 同理可得
-
-```
-        3
-      /   \
-     9     8
-    / \   / \
-   7   4 5   2
-```
-
-最后, 我们对索引 0 的节点进行堆化
-
-```
-        9
-      /   \
-     3     8
-    / \   / \
-   7   4 5   2
-```
-
-注意, 要点来了, 为了避免上层堆化过程影响下层堆化, 这里会 **递归的再次调用堆化函数**, 因为我们交换了 0 号节点和 1 号节点, 所以这里会再次检查之前的更大的节点, 即 `largest != root` 时, 我们交换这两个元素的位置, 并且再次检查原来 `largest` 位置, 即原来的元素 `9` 的位置, 交换过后, 现在已经是 `3`, 检查这个父节点下面的子节点是否需要堆化, 然后我们发现确实需要!
-
-```
-        9
-      /   \
-     7     8
-    / \   / \
-   3   4 5   2
-```
-
-为什么在堆化最下层子节点的时候没有提呢, 因为那时候这些最下层子节点已经没有其他子节点了
-
-如此, 我们成功构建了最大堆. 我们不在乎子节点如何排序, 只要满足堆的结构就好, 并且知道此时最大值 9 被我们找到了且放在堆顶
-
-然后我们开始循环提取最大元素, 即在第二个循环的位置
-
-在循环中我们看到, 首先我们交换对顶和最后一个叶子节点
-
-```
-        2
-      /   \
-     7     8
-    / \   /
-   3   4 5   9
-```
-
-现在轮到 `end` 参数发力了, 通过它, 我们将不会在堆化的过程中考虑刚刚被我们找到的最大元素 9, 所以我去掉了那条线, 然后对这个新的堆进行堆化, 过程和上面一样, 我们发现索引 2 (8) 无需变动, 索引 1 (7) 无需变动, 索引 0 (2) 需要变动, 和右边的索引 1 (8) 交换后, 又一次影响到了索引 1 的子树, 我们对其堆化, 得到
-
-```
-        8
-      /   \
-     7     5
-    / \   /
-   3   4 2   9
-```
-
-我们又一次找到了最大的数据 8, 让它和我们保护的位置, 即上一次找到的最大元素的前一个节点交换位置, 得到
-
-```
-        2
-      /   \
-     7     5
-    / \
-   3   4 8   9
-```
-
-可见我们每一次都会将最大元素移动到正确的位置, 同时堆这个结构也能让我们以较低的时间复杂度进行操作, 因为二叉也是一种分而治之
-
-# Timsort
-
-Timsort 是一种混合排序, 结合了不同方案的优点, 在 Java 等语言中作为默认的排序方案, 实现起来比较复杂, 所以这里只给出大致原理和简化版实现
-
-结合了归并排序和插入排序的优点. 它寻找已有序的 **Run**, 用插入排序扩展短 Run, 然后合并 Run
-
-看不懂没关系, 让我尽可能通俗的解释一下
-
-TimSort 就像整理一副扑克牌, 我们先看看能不能找到顺子(**数据中已经有序的小段**), 如果找到的顺子太短了, 就从牌堆里找一找给它补长一点(**通过插入排序补全小段**). 顺子和顺子也许可以凑成更大的顺子, 层层合并, 最终我们就得到了一副排序好的牌
-
-接下来解释一些专有名词
-
-- `Run`: 已经有序的小段
-- `MIN_RUN`: 最小 `Run` 长度, 小于它时使用插入排序
-- 分段排序: 将数组分成 `MIN_RUN` 大小的块并用插入排序
-- 合并阶段：按大小倍增的方式合并相邻的已排序 `Run`
-- `merge` 函数：标准的两路归并，需要克隆元素
-
-这个算法很优秀, 在最差的情况下也能保证 O(nlogn) 的时间复杂度, 对部分有序数据接近O(n)
+然后根据上面的定义, 我们给出基本方法
 
 ```rs
-fn tim_sort<T: Ord + Clone>(array: &mut [T]) {
-    const MIN_RUN: usize = 32;  // 最小 Run 长度
-
-    let len = array.len();
-    if len <= MIN_RUN {  // 小数组直接插入排序
-        // 这个我们之前实现过
-        insertion_sort(array);
-        return;
+impl<T> Heap<T>
+where
+    T: Default,
+{
+    pub fn new(comparator: fn(&T, &T) -> bool) -> Self {
+        Self {
+            count: 0,
+            // 初始化时用默认值占位, 所以我们需要的堆顶在 1 号位置
+            items: vec![T::default()],
+            comparator,
+        }
     }
 
-    // 将数组分成 MIN_RUN 大小的块并排序
-    for i in (0..len).step_by(MIN_RUN) {
-        let end = std::cmp::min(i + MIN_RUN, len);
-        insertion_sort(&mut array[i..end]);
+    pub fn len(&self) -> usize {
+        self.count
     }
 
-    // 合并已排序的 Run
-    // 初始块大小
-    let mut size = MIN_RUN;
-    // 只要块仍然比整个数组小
-    while size < len {
-        // 每次处理两个相邻的块
-        for left in (0..len).step_by(2 * size) {
-            // 计算中间点和右边界
-            // 第一个块的结尾
-            let mid = std::cmp::min(left + size, len);
-            // 第二个块的结尾
-            let right = std::cmp::min(left + 2 * size, len);
-            // 如果有两个块可以合并
-            if mid < right {
-                // 合并它们
-                merge(array, left, mid, right);
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    fn parent_idx(&self, idx: usize) -> usize {
+        idx / 2
+    }
+
+    // 检查给定节点是否有至少一个子节点, 对于上浮和下沉操作至关重要
+    // 左子节点不存在那么一定不存在右子节点
+    fn children_present(&self, idx: usize) -> bool {
+        self.left_child_idx(idx) <= self.count
+    }
+
+    fn left_child_idx(&self, idx: usize) -> usize {
+        idx * 2
+    }
+
+    fn right_child_idx(&self, idx: usize) -> usize {
+        self.left_child_idx(idx) + 1
+    }
+}
+```
+
+因为我们这里的堆是从零构建的, 和堆排序自下而上堆化不同, 我们只要在每次插入或弹出新元素时就维护好堆的秩序即可(即上浮下沉)
+
+那么这里给出添加新元素的方法, 在这里我们首先将元素添加到末尾, 然后层层比较, 让元素上浮, 最终位于正确位置. 这次我们就使用循环来解决, 而在后面的堆排序中我们会使用递归的方式
+
+```rs
+pub fn add(&mut self, value: T) {
+    self.items.push(value);
+    self.count += 1;
+    let mut idx = self.count;  // 新元素的索引
+
+    // 上浮过程
+    while idx > 1 {
+        let parent_idx = self.parent_idx(idx);
+        // 调用比较函数
+        if (self.comparator)(&self.items[idx], &self.items[parent_idx]) {
+            self.items.swap(idx, parent_idx);
+            // 如果一直能比较, 那么最多比较到节点 1 比较就结束了
+            idx = parent_idx;
+        } else {
+            // 如果以及找到正确位置了, 那么就停下来
+            break;
+        }
+    }
+}
+```
+
+我们用一段例子来解释这个过程, 加入有一个如下的最小堆
+
+```
+       1 (idx = 1)
+     /   \
+    3     5 (idx = 3)
+   / \
+  4   8 (idx = 4,5)
+```
+
+现在插入数据 2
+
+```
+      1
+    /   \
+   3     5
+  / \   /
+ 4   8 2 (idx = 6)
+```
+
+比较 idx(6) 和父节点 idx(3), 发现需要上浮, 交换
+
+```
+      1
+    /   \
+   3     2 (idx = 3)
+  / \   /
+ 4   8 5 (idx = 6) 这里交换了节点索引
+```
+
+然后继续尝试和父节点比较, 发现无需移动, 节点插入成功
+
+然后, 为了能更好的访问堆, 比如我们可能需要按从大到小的顺序读取堆的元素, 我们可能需要对它进行迭代, 所以我们也为堆实现一个迭代器 Trait, 不过在此之前, 我们还需要实现一个方法, 用于找到当前节点最小(或最大)的子节点, 函数名是题目中给出来的, 我就不改了. 这个方法对于实现下沉操作很重要, 而实现迭代器就需要这种下沉操作
+
+```rs
+fn smallest_child_idx(&self, idx: usize) -> usize {
+    let left = self.left_child_idx(idx);
+    let right = self.right_child_idx(idx);
+
+    // 右节点不存在那么左节点就是, 不论是找最大的还是最小的
+    if right > self.count {
+        left
+    } else {
+        // 调用我们的比较函数, 也许是找小的, 也许是找大的
+        if (self.comparator)(&self.items[left], &self.items[right]) {
+            left
+        } else {
+            right
+        }
+    }
+}
+```
+
+现在我们可以实现一个迭代器了, 先给出代码
+
+```rs
+impl<T> Iterator for Heap<T>
+where
+    T: Default,
+{
+    type Item = T;
+
+    // 取出堆顶元素 (索引1的元素)
+    // 此时堆没有顶部节点了, 所以将最后一个元素移到堆顶, 简单方便
+    // 执行 "下沉"(sink) 操作, 恢复堆的性质
+    fn next(&mut self) -> Option<T> {
+        //TODO
+        if self.count == 0 {
+            return None;
+        }
+
+        // 取出堆顶元素
+        let top = self.items.swap_remove(1);
+        self.count -= 1;
+
+        if self.count > 0 {
+            // 下沉过程
+            let mut idx = 1;
+            while self.children_present(idx) {
+                let child_idx = self.smallest_child_idx(idx);
+                if !(self.comparator)(&self.items[idx], &self.items[child_idx]) {
+                    self.items.swap(idx, child_idx);
+                    idx = child_idx;
+                } else {
+                    break;
+                }
             }
         }
-        // 每次合并后对小块大小的要求大小翻倍
-        size *= 2;
+
+        Some(top)
+    }
+}
+```
+
+我们还是给出一个示例来, 依然是之前的最小堆
+
+```
+       1
+     /   \
+    3     2
+   / \   /
+  4   8 5
+```
+
+首先弹出 idx(1), 即数据 1, 然后用最后一个元素 idx(6) 即数据 5 来替代原来堆顶的位置
+
+```
+       5
+     /   \
+    3     2
+   / \
+  4   8
+```
+
+然后我们需要自上而下的比较这对堆造成的影响, 把错误的元素进行下沉, 首先比较 idx(1) 和它的最小的子节点 idx(3) 即 2, 发现需要移动
+
+```
+       2
+     /   \
+    3     5 (交换节点序号)
+   / \
+  4   8
+```
+
+然后检查移动过的节点, 这里是 idx(3), 看看之前的移动有没有破坏它的只需, 发现并没有, 因为它已经没有子节点了, 即使有也会循环继续交换. 因此此时堆已经恢复秩序, 无需调整
+
+最后, 我们只需要再用一些结构包裹这个堆, 就可以实现具体的最大堆和最小堆了
+
+```rs
+pub struct MinHeap;
+
+impl MinHeap {
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new<T>() -> Heap<T>
+    where
+        T: Default + Ord,
+    {
+        Heap::new(|a, b| a < b)
     }
 }
 
-fn merge<T: Ord + Clone>(array: &mut [T], left: usize, mid: usize, right: usize) {
-    let left_part = array[left..mid].to_vec();  // 复制左半部分
-    let right_part = array[mid..right].to_vec();  // 复制右半部分
+pub struct MaxHeap;
 
-    let mut i = 0;  // 左部分索引
-    let mut j = 0;  // 右部分索引
-    let mut k = left;  // 合并位置索引
+impl MaxHeap {
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new<T>() -> Heap<T>
+    where
+        T: Default + Ord,
+    {
+        Heap::new(|a, b| a > b)
+    }
+}
 
-    // 这和我们合并链表的方式相同
-    // 合并两个已排序数组
-    while i < left_part.len() && j < right_part.len() {
-        if left_part[i] <= right_part[j] {
-            array[k] = left_part[i].clone();
-            i += 1;
+// 或者
+
+impl<T> Heap<T>
+where
+    T: Default + Ord,
+{
+    /// Create a new MinHeap
+    pub fn new_min() -> Self {
+        Self::new(|a, b| a < b)
+    }
+
+    /// Create a new MaxHeap
+    pub fn new_max() -> Self {
+        Self::new(|a, b| a > b)
+    }
+}
+```
+
+最后让我们使用我们的堆结构实现一个 Top-K-Min 函数, 找出一组数值之中最小的 K 个值
+
+```rs
+/// 获取最小的K个元素
+pub fn top_k_min<T: Ord + Default>(nums: Vec<T>, k: usize) -> Vec<T> {
+    if k == 0 || nums.is_empty() {
+        return vec![];
+    }
+
+    let mut heap = MaxHeap::new(); // 最大堆保留最小的 K 个元素
+
+    for num in nums {
+        if heap.len() < k {
+            heap.add(num);
         } else {
-            array[k] = right_part[j].clone();
-            j += 1;
+            if &num < heap.items.get(1).unwrap() {
+                heap.next(); // 移除当前堆顶
+                heap.add(num);
+            }
         }
-        k += 1;
     }
 
-    // 复制剩余元素
-    while i < left_part.len() {
-        array[k] = left_part[i].clone();
-        i += 1;
-        k += 1;
-    }
+    heap.collect()
+}
+```
 
-    while j < right_part.len() {
-        array[k] = right_part[j].clone();
-        j += 1;
-        k += 1;
-    }
+然后给出一些测试用例
+
+```rs
+#[test]
+fn test_top_k_min() {
+    let nums = vec![4, 1, 3, 12, 7, 5];
+    // 由于 next 函数的行为会导致结果是反转的
+    assert_eq!(top_k_min(nums.clone(), 3), vec![4, 3, 1]);
+    assert_eq!(top_k_min(nums.clone(), 5), vec![7, 5, 4, 3, 1]);
+    assert_eq!(top_k_min(nums.clone(), 0), vec![]);
+}
+
+#[test]
+fn test_edge_cases() {
+    // 元素全部相同
+    assert_eq!(top_k_min(vec![2, 2, 2], 2), vec![2, 2]);
+    // K 大于数组长度
+    assert_eq!(top_k_min(vec![1, 2], 5), vec![2, 1]);
 }
 ```

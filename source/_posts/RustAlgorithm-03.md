@@ -1,8 +1,8 @@
 ---
 feature: false
-title: Rust 数据结构与算法(3) | 图与搜索
+title: Rust 数据结构与算法(3) | 排序
 date: 2025-03-26 18:00:00
-abstracts: 图与搜索算法密不可分, 例如广度优先搜索(BFS)和深度优先搜索(DFS)是两种最基本的图遍历算法, 它们构成了许多高级图算法的基础. 所以在这一节中, 我们将会先讲解图这个概念, 然后实现三种搜索算法
+abstracts: 排序是值得单开一节的内容, 因为排序方案种类众多, 思路也比较复杂, 在这一节将介绍冒泡排序, 插入排序, 快速排序, 堆排序, 以及一个简化版的 TimSort
 tags:
     - Rust
 categories:
@@ -10,487 +10,340 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-# 图(Graph)
+排序是值得单开一节的内容, 因为排序方案种类众多, 思路也比较复杂, 在这一节将介绍冒泡排序, 插入排序, 快速排序, 堆排序, 以及一个简化版的 TimSort
 
-**图(Graph)** 与搜索算法密不可分, 例如 **广度优先搜索(BFS)** 和 **深度优先搜索(DFS)** 是两种最基本的图遍历算法, 它们构成了许多高级图算法的基础. 首先我们来认识一下图. 简单来说, 图就类似于地图, 有地点, 地点和地点之间有路径连接
+# 冒泡排序 (Bubble Sort)
 
-图是由 **顶点(Vertex)和边(Edge)** 组成的非线性数据结构, 数学表示为 `G = (V, E)`, 其中
+这可以说是思路上最简单的排序方案之一了 (睡眠排序和猴子排序这种异类不算)
 
-- `V` 是顶点集合 (在代码中用 `usize` 索引表示)
-- `E` 是连接顶点的边集合
-
-常见的图结构包括
-
-- 无向图: 没有方向, 比如社交关系都是相互的
-- 有向图: 拥有一个递进的方向, 比如说网页内的链接, 是按顺序层层跳转的
-- 加权图: 边带有权重的图, 比如说在导航软件中, 为了计算最佳路线, 我们就要给每段路经赋予不同的权重
-
-常用的用于表示图的结构包括
-
-- 邻接表(Adjacency List): 为每个顶点存储一个列表, 记录与之相连的顶点
-- 邻接矩阵(Adjacency Matrix): 使用二维数组表示顶点之间的连接关系
-- 边列表(Edge List)：简单地存储所有边的列表
-
-我们说图与搜索联系紧密, 为什么图需要搜索? 图的搜索算法用于系统地探索图中的节点和边, 主要解决以下问题
-
-- 检查图中是否存在特定节点
-- 查找从一个节点到另一个节点的路径
-- 检查图的连通性
-- 发现图的结构特性
-
-所有图搜索算法都遵循一个通用模式
-
-- 从起始节点开始
-- 逐步"发现"相邻节点
-- 记录已访问节点避免重复
-- 按照特定策略选择下一个要访问的节点, 例如下面我们会讲的深度优先和广度优先
-
-那么下面让我们简单实现一个图, 以及图的相关函数
-
-## 基本数据结构
+冒泡排序通过重复地遍历要排序的列表, 比较相邻元素并交换它们的位置 (如果顺序错误) 来工作, 这个过程重复进行, 直到列表被排序
 
 ```rs
-pub struct UndirectedGraph {
-    adjacency_table: HashMap<String, Vec<(String, i32)>>,
-}
-```
-
-这是一种加权无向图, `HashMap` 的键是节点名称 (`String`), 值是该节点的邻接表, 存储了相邻节点和边的权重 (`Vec<(String, i32)>`)
-
-然后题目定义了一个图的通用 Trait
-
-```rs
-pub trait Graph {
-    // 基本功能, 新建, 获得可变邻接表或不可变邻接表
-    fn new() -> Self;
-    fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>>;
-    fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>>;
-    // 添加节点和边, 需要我们实现
-    fn add_node(&mut self, node: &str) -> bool {
-        //TODO
-    }
-    fn add_edge(&mut self, edge: (&str, &str, i32)) {
-        //TODO
-    }
-    // 图是否包含节点
-    fn contains(&self, node: &str) -> bool {
-        self.adjacency_table().get(node).is_some()
-    }
-    // 获得所有节点
-    fn nodes(&self) -> HashSet<&String> {
-        self.adjacency_table().keys().collect()
-    }
-    // 获得所有的边
-    fn edges(&self) -> Vec<(&String, &String, i32)> {
-        let mut edges = Vec::new();
-        for (from_node, from_node_neighbours) in self.adjacency_table() {
-            for (to_node, weight) in from_node_neighbours {
-                edges.push((from_node, to_node, *weight));
-            }
-        }
-        edges
-    }
-}
-```
-
-注意, 题目中还给了一个用于错误处理的结构体
-
-```rs
-use std::fmt;
-#[derive(Debug, Clone)]
-pub struct NodeNotInGraph;
-impl fmt::Display for NodeNotInGraph {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "accessing a node that is not in the graph")
-    }
-}
-```
-
-然后我们的题目以及为无向图实现了这个 Trait
-
-```rs
-impl Graph for UndirectedGraph {
-    fn new() -> UndirectedGraph {
-        UndirectedGraph {
-            adjacency_table: HashMap::new(),
-        }
-    }
-    fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>> {
-        &mut self.adjacency_table
-    }
-    fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>> {
-        &self.adjacency_table
-    }
-}
-```
-
-我们现在的策略是节点不存在时自动创建节点, 至于错误处理的版本读者可以自行实现
-
-而且既然题目在 Trait 中留的不是函数签名, 而是带有花括号的, 那我们就在 Trait 中实现这个默认方法
-
-```rs
-fn add_node(&mut self, node: &str) -> bool {
-    // 检查是否存在节点, 不存在就自动创建
-    if self.contains(node) {
-        false
-    } else {
-        self.adjacency_table_mutable()
-            .insert(node.to_string(), Vec::new());
-        true
-    }
-}
-fn add_edge(&mut self, edge: (&str, &str, i32)) {
-    // 边的信息, 两个节点, 一个权重
-    let (node1, node2, weight) = edge;
-
-    // 确保两个节点都存在
-    if !self.contains(node1) {
-        self.add_node(node1);
-    }
-    if !self.contains(node2) {
-        self.add_node(node2);
-    }
-
-    // 获取邻接表可变引用
-    let adj_table = self.adjacency_table_mutable();
-
-    // 添加 node1 -> node2 的边
-    adj_table
-        .get_mut(&node1.to_string())
-        .unwrap()
-        .push((node2.to_string(), weight));
-
-    // 添加 node2 -> node1 的边 (因为我们是无向图, 两边不能感知到对方是否连接, 所以需要互相连线)
-    adj_table
-        .get_mut(&node2.to_string())
-        .unwrap()
-        .push((node1.to_string(), weight));
-}
-```
-
-只要理解了图的结构, 这并不难, 我们已经实现了一个基本的图, 不过它也只是个图, 还没有任何功能. 下面让我们学习一些搜索算法
-
-# 广度优先搜索 (Breadth-First Search, BFS)
-
-广度优先搜索是一种用于 **遍历或搜索** **树或图** 的算法。它从根节点(或任意节点)开始, 首先访问所有相邻节点, 然后再依次访问这些相邻节点的相邻节点, 以此类推, 一层一层地向外横向扩展
-
-而提到广度优先搜索, 了解的人就会想到 **深度优先搜索(DFS)**, 接下来我们也会介绍这个, 它就是上面的描述的对立面, 路径式探索, 纵向深入
-
-BFS 在以下领域发挥重要作用
-
-- 最短路径查找: 在无权图中找到两点间的最短路径
-- 连通性检查: 判断图中两点是否连通
-- 层级遍历: 按层次处理树或图结构
-- 网络爬虫: 按层级抓取网页
-- 社交网络分析: 查找特定距离内的朋友关系
-
-BFS通常使用 **队列(queue)** 来实现, 遵循以下步骤
-
-1. 将起始节点放入队列并标记为已访问
-2. 从队列中取出一个节点 (真的就取出去不要了)
-3. 访问该节点的所有未访问邻接节点, 将它们放入队列并标记为已访问
-4. 重复步骤 2-3 直到队列为空 (即随后访问的一个节点没有未访问的邻居了)
-
-还是先从数据结构开始, 这里我们需要一个图结构, 先看定义
-
-```rs
-struct Graph {
-    adj: Vec<Vec<usize>>,
-}
-```
-
-还记得我们之前讲过的图吗, 这其实就是 **邻接表(Adjacency List)**
-
-- 外层 Vec 的索引代表节点 ID (如节点 0, 1, 2...)
-- 每个内层 Vec 只存储实际存在的边, 适合稀疏图
-- 对比邻接矩阵, 存储了所有可能的点, 节省大量内存
-- 对比边列表(`Vec<(usize, usize)>`)又能提高查询效率
-
-这里给一个简单的示例
-
-```rs
-// 对应无向图：
-// 0 -- 1
-// |    |
-// 2    3
-adj: vec![
-    vec![1, 2],  // 节点0的邻居
-    vec![0, 3],  // 节点1的邻居
-    vec![0],     // 节点2的邻居
-    vec![1]      // 节点3的邻居
-]
-```
-
-同时操作这个图也很简单
-
-- 查询节点 `v` 的邻居: `adj[v]` O(1)
-- 判断 `u-v` 是否相连: `adj[u].contains(&v)` O(degree), 与邻居数量成正比
-- 添加边 `(u,v)`: `adj[u].push(v)` O(1)
-- 遍历所有边: 嵌套循环遍历 `adj`, O(V+E)
-
-这样我们就能为这个结构添加两个基本方法了
-
-```rs
-fn new(n: usize) -> Self {
-    Graph {
-        adj: vec![vec![]; n],
-    }
-}
-
-// Add an edge to the graph
-fn add_edge(&mut self, src: usize, dest: usize) {
-    self.adj[src].push(dest);
-    // 对于无向图, 我们需要双向边
-    self.adj[dest].push(src);
-}
-```
-
-接下来是需要我们实现的功能, 要求我们实现广度优先搜索并返回一个访问列表, 先看代码
-
-```rs
-use std::collections::VecDeque;
-
-fn bfs_with_return(&self, start: usize) -> Vec<usize> {
-    // 初始化访问顺序记录器
-    let mut visit_order = vec![];
-    // 创建访问标记数组, 防止重复访问或无限循环, 初始都为 false
-    // self.adj.len() 获取图中节点总数
-    let mut visited = vec![false; self.adj.len()];
-
-    // 创建双端队列作为 BFS 队列
-    let mut queue = VecDeque::new();
-
-    // 标记起始节点为已访问, 并加入队列
-    visited[start] = true;
-    queue.push_back(start);
-
-    // 主循环: 当队列不为空时持续处理, 后面推入前面取出, 保证层级顺序
-    while let Some(current) = queue.pop_front() {
-        // 将当前节点加入访问顺序
-        visit_order.push(current);
-        // 遍历当前节点的所有邻居
-        // &self.adj[current] 获取当前节点的邻居列表
-        // 使用 &neighbor 避免所有权转移
-        for &neighbor in &self.adj[current] {
-            // 如果邻居未被访问过
-            if !visited[neighbor] {
-                // 标记为已访问
-                visited[neighbor] = true;
-                // 加入队列尾部 (保证层级顺序)
-                queue.push_back(neighbor);
+fn bubble_sort<T: Ord>(array: &mut [T]) {
+    for i in 0..array.len() {  // 外层循环控制排序轮数
+        for j in 0..array.len() - i - 1 {  // 内层循环控制每轮比较次数
+            if array[j] > array[j + 1] {  // 如果前一个元素大于后一个
+                array.swap(j, j + 1);    // 交换它们的位置
             }
         }
     }
-    // 返回访问顺序
-    visit_order
 }
 ```
 
-我们使用 `VecDeque` 作为队列, 因为它支持高效的 `头部删除(pop_front)` 和 `尾部插入(push_back)` 操作, 时间复杂度都是O(1)
+- 外层循环: 控制排序轮数, 每轮会将当前最大的元素 **冒泡** 到正确位置
+- 内层循环: 比较相邻元素, 将较大的元素向后移动
 
-- 首先初始化创建访问顺序数组, 访问标记数组和队列
-- 起始处理: 将起始节点标记为已访问并加入队列
-- 主循环
-    - 从队列头部取出一个节点
-    - 将该节点加入访问顺序
-    - 遍历该节点的所有邻居, 将未访问的邻居标记为已访问并加入队列
-    - 终止条件: 当队列为空时, 表示所有可达节点都已访问完毕
+时间复杂度为 O(n²)
 
-有的人可能好奇, 就为了一个访问顺序列表, 这东西有什么用啊? 它最基础的用处, 就像这句话说的, 没错, 就是为了获取从一个入口进去之后的访问列表, 基于这个, 我们可以发展出许多其他应用
+# 插入排序 (Insertion Sort)
 
-首先就是最短路径查找, 对于无权图, BFS 天然的就能保证, 从某一入口进入后第一次访问的节点, 就是访问该节点的最短路径
-
-然后, 还能做一些连通性判断, 原理也很简单, 只要访问列表的长度和节点数量相同, 就代表所有的节点是彼此连通的
-
-# 深度优先搜索 (Depth-First Search, DFS)
-
-深度优先搜索同样是一种用于遍历或搜索树或图的算法. 它沿着树的深度遍历树的节点, 尽可能深的搜索树的分支. 当节点 v 的所在边都已被探寻过, 搜索将回溯到发现节点 v 的那条边的起始节点. 这一过程一直进行到已发现从源节点可达的所有节点为止. 有点像玩游戏时收集全结局的样子
-
-正如上面所说, DFS 的核心思想是, 尽可能深地探索图的分支，直到无法继续前进才回溯. 这种策略使得 DFS 特别适合寻找图中的路径或检测环等问题
-
-除此之外 DFS 还在以下领域发挥作用
-
-- 遍历图的所有节点
-- 拓扑排序
-- 解决迷宫问题
-- 连通分量分析
-
-通常使用递归或显式栈来实现. 这里我们使用递归实现
-
-基本数据结构和方法与 BFS 相同, 以及这里多了个方法
+插入的思想也很简单, 冒泡是将最大的元素放到正确的位置, 插入是将当前元素放到相对正确的位置, 通过构建有序序列, 对于未排序数据, 在已排序序列中从后向前扫描, 找到相应位置并插入
 
 ```rs
-// Perform a depth-first search on the graph, return the order of visited nodes
-fn dfs(&self, start: usize) -> Vec<usize> {
-    let mut visited = HashSet::new();
-    let mut visit_order = Vec::new();
-    self.dfs_util(start, &mut visited, &mut visit_order);
-    visit_order
-}
-```
-
-这要求我们需要使用 `HashSet<usize>` 来记录已访问的节点, 集合能保证数据的唯一性, 并且它的查找和插入操作都是平均 O(1) 时间复杂度, 然后同样用 `Vec<usize>` 来存储访问顺序
-
-这个实现比较简单, 我们直接先给出代码
-
-```rs
-fn dfs_util(&self, v: usize, visited: &mut HashSet<usize>, visit_order: &mut Vec<usize>) {
-    // 标记当前节点为已访问
-    visited.insert(v);
-    // 将当前节点加入访问顺序
-    visit_order.push(v);
-    // 遍历当前节点的所有邻接节点
-    for &neighbor in &self.adj[v] {
-        // 如果邻居节点没有被访问, 那么不管其他邻居节点了, 我们立刻深入这个邻居节点继续递归调用
-        // 这里选择递归实现, 更直观体现DFS的自然回溯特性
-        // 但是如果图很深可能会调用栈溢出
-        // 这同样可以避免无限循环
-        if !visited.contains(&neighbor) {
-            self.dfs_util(neighbor, visited, visit_order);
+fn insertion_sort<T: Ord>(array: &mut [T]) {
+    for i in 1..array.len() {  // 从第二个元素开始 (索引1)
+        let mut j = i;  // j 是当前要插入的元素位置
+        while j > 0 && array[j] < array[j - 1] {  // 当前元素比前一个小
+            array.swap(j, j - 1);  // 交换它们
+            j -= 1;  // 继续向前比较
         }
     }
 }
 ```
 
-主要内容都体现在注释里了, 读者可以自行实现一个迭代的方案
+- 外层循环: 遍历每个待插入的元素, 假定 0 号位置就是最初的的有序部分
+- 内层循环: 将当前元素与已排序部分比较并交换, 直到找到正确位置
 
-# 二叉搜索树 (Binary Search Tree, BST)
+时间复杂度为 O(n²)
 
-学习了两种图搜索算法, 我们再来看一中特殊的, 基于二叉树的
+# 快速排序 (Quick Sort)
 
-有了前面学堆排序的经验, 对二叉树的概念应该有一定了解了
+这是一个经典且常用的排序方案, 到了这以后, 算法开始上难度了
 
-二叉搜索树是一种特殊的二叉树数据结构, 其中每个节点都满足以下性质
-
-- 左子树中所有节点的值都小于当前节点的值
-- 右子树中所有节点的值都大于当前节点的值
-- 左右子树也分别是二叉搜索树
-
-二叉树有节点, 有连线, 其实也像是一个图
-
-提到二叉就会提到分而治之的思想, 二叉搜索树具有以下特点
-
-- 高效查找: 平均时间复杂度为 O(log n), 比线性结构更高效
-- 动态数据维护: 可以高效地插入和删除数据
-- 有序数据存储: 中序遍历BST可以得到有序序列
-- 作为更复杂数据结构的基础: 如 AVL 树, 红黑树等都是基于 BST 的扩展
-
-二叉搜索树在数据库索引, 文件系统目录结构, 内存中的有序数据存储, 路由算法中的路由表都有很多应用
-
-下面我们来从零实现一个二叉搜索树
-
-那么首先肯定是数据结构, 二叉搜索树的节点类似于双链表, 为了在编译时确定数据类型大小, 我们同样需要使用智能指针将数据分配到堆上, 只不过这次我们不使用 `NonNull`, 而是 `Box` 智能指针, 之前说过, 它是一个胖指针, 存储了更多的元信息, 表示唯一所有权, 适合表示树节点的父子关系, 即父节点销毁时子节点一并销毁. 总之树结构天然适合所有权语义, 不需要频繁的节点共享, 并且使用 `Box` 实现简单且安全
+核心思想是 **分而治之**: 选择一个 "基准" 元素, 将数组分为两个子数组, 小于基准的和大于基准的, 然后递归排序子数组, 递归的过程就是继续分治的过程
 
 ```rs
-#[derive(Debug)]
-struct TreeNode<T>
-where
-    // 要求我们的元素是可排序的
-    T: Ord,
-{
-    value: T,
-    left: Option<Box<TreeNode<T>>>,
-    right: Option<Box<TreeNode<T>>>,
+fn quick_sort<T: Ord>(array: &mut [T]) {
+    if array.len() <= 1 {  // 基本情况: 空数组或单元素数组已排序
+        return;
+    }
+    let pivot = partition(array);  // 获取基准位置
+    quick_sort(&mut array[..pivot]);  // 递归排序左半部分
+    quick_sort(&mut array[pivot + 1..]);  // 递归排序右半部分
 }
 
-impl<T> TreeNode<T>
-where
-    T: Ord,
-{
-    fn new(value: T) -> Self {
-        TreeNode {
-            value,
-            left: None,
-            right: None,
+fn partition<T: Ord>(array: &mut [T]) -> usize {
+    let pivot = array.len() - 1;  // 选择最后一个元素作为基准
+    let mut i = 0;  // i 是小于基准的元素的边界, 为了避免每次都移动基准
+    for j in 0..pivot {  // 遍历除基准外的所有元素
+        if array[j] <= array[pivot] {  // 当前元素小于等于基准
+            array.swap(i, j);  // 把它放到i的位置
+            i += 1;  // 移动i边界
         }
     }
+    array.swap(i, pivot);  // 把基准放到正确位置
+    i  // 返回基准的最终位置
 }
 ```
 
-类似链表, 我们也需要一个结构来表示树根
+`partition` 函数: 将数组分为两部分, 返回基准的最终位置
+`quick_sort` 递归: 对左右两部分分别递归排序
+`array.swap(i, j)`: 交换元素位置以维持分区不变式
+
+时间复杂度：平均 O(nlogn), 最坏 O(n²) (当分区极度不平衡时)
+
+# 堆排序 (Heap Sort)
+
+之前我们学过了基本的堆结构, 现在我先用尽可能通俗易懂的方式解释一下堆排序
+
+假如这里有一些大小不一的球, 我们尝试给球按大小排序, 首先我们把这些球堆在一起(**构建堆**), 像一个金字塔(**最大堆**), 最大的球总是在最上面(**大顶堆排序**, 同样的你也可以构建小顶堆)
+
+然后(**开始排序**), 把最上面的球(**最大值**)拿走, 放到一边. 把最后一个球放到最上面(**交换最大值与数组末尾**), 重新调整球堆(**待排序数组长度减一**), 让最大的球再次位于最上面, 重复这个过程
+
+堆排序就是利用堆这种数据结构: 首先构建最大堆, 然后重复从堆中提取最大元素放到数组末尾
 
 ```rs
-#[derive(Debug)]
-struct BinarySearchTree<T>
-where
-    T: Ord,
-{
-    root: Option<Box<TreeNode<T>>>,
+// 这次我们先看辅助函数, 负责将数组的一部分 "堆化"
+fn heapify<T: Ord>(array: &mut [T], root: usize, end: usize) {
+    let mut largest = root;  // 假设根节点最大
+    // 因为通常来说, 每层元素的个数是上一层的两倍, 所以上层节点的序号的二倍就是本层节点序号的开始
+    // 通过 +1 和 +2 获得本层两个节点的索引
+    // 这相当于将一个二叉堆平铺在数组上
+    let left = 2 * root + 1;  // 左子节点索引
+    let right = 2 * root + 2;  // 右子节点索引
+
+    // 我们只处理这一层, 用 end 作为边界
+    // 找出 root, left, right 中最大的
+    if left < end && array[left] > array[largest] {
+        largest = left;
+    }
+    if right < end && array[right] > array[largest] {
+        largest = right;
+    }
+
+    if largest != root {  // 如果最大不是 root
+        array.swap(root, largest);  // 交换它们
+        heapify(array, largest, end);  // 递归堆化受影响的子树
+    }
 }
 
-impl<T> BinarySearchTree<T>
-where
-    T: Ord,
-{
-    fn new() -> Self {
-        BinarySearchTree { root: None }
+fn heap_sort<T: Ord>(array: &mut [T]) {
+    if array.len() <= 1 {  // 基本情况
+        return;
+    }
+
+    // 在这里, 我们相对于把数组结构视为一颗无序二叉树
+    // 构建最大堆
+    for i in (0..array.len() / 2).rev() {  // 从最后一个非叶子节点开始
+        heapify(array, i, array.len());  // 堆化
+    }
+
+    // 提取元素
+    for i in (1..array.len()).rev() {  // 从后往前
+        array.swap(0, i);  // 把当前最大元素放到数组末尾
+        heapify(array, 0, i);  // 对剩余元素重新堆化
     }
 }
 ```
 
-基本结构并不复杂, 接下来我们为其实现插入和搜索这两个最基本的功能, 至于修改和删除, 就交给读者自行实现
+- `heapify` 函数: 维护堆的性质, 确保父节点大于子节点
+- 构建堆: 从最后一个非叶子节点开始向前堆化
+- 排序阶段: 重复提取最大元素并堆化剩余部分
 
-我们首先为树节点实现这两个功能, 因为树根本质上就是树节点的包装
+时间复杂度: O(nlogn)
+
+然后我们再用实际例子分析一下这个过程, 先介绍排序函数, 因为一旦理解了排序函数, 通过层层递归, 堆化函数一定能变成给一个仅包含一个父节点和至多两个子节点的堆进行堆化
+
+前几行不用解释, 从构建最大堆开始, 首先是如何找到最后一个非叶子节点, 所谓叶子节点就是没有子节点的节点, 举个例子, 假设我们有这样一个数组
+
+```
+[3, 7, 5, 9, 4, 8, 2]
+```
+
+我们直接按数组顺序将其视作二叉树
+
+```
+        3
+      /   \
+     7     5
+    / \   / \
+   9   4 8   2
+```
+
+对于最后一个节点 `n-1` (这里 n 为 7, 所以我们的索引为 6), 我们可以计算它的父节点, 也就是最后一个非叶子节点 `(n-2)/2`(注意这里是整数除法, 四舍五入) (对应索引 2, 对应数据 `5`)
+
+至于为什么这样计算, 假设最后一个非叶子节点有两个子节点, 那么根据计算公式就可以知道, 它的父节点是 `(n-2)/2`, 如果最后一个非叶子节点有一个子节点, 那么我们可以知道 `(n-1)/2` 才是正确结果, 可是由于四舍五入, `(n-1)/2 = (n-2)/2 + 1/2`, 那么 `(n-2)/2` 比正确结果少了 `1/2`, 但正好可以通过四舍五入得到正确结果. 因此无论如何, `n/2 - 1` 都将正确的得到最后一个非叶子节点, 又因为 `..` 不包含结束值, 所以 `(0..array.len() / 2).rev()` 就将从最后一个非叶子节点开始逆序迭代
+
+我们找到了最后一个非叶子节点, 这里索引是 2, 对应数据 `5`, 我们先对这个节点进行堆化. 发现左子节点更大, 交换得到
+
+```
+        3
+      /   \
+     7     8
+    / \   / \
+   9   4 5   2
+```
+
+然后对上一个节点, 索引为 1, 对应数据 `7`, 进行堆化, 同理可得
+
+```
+        3
+      /   \
+     9     8
+    / \   / \
+   7   4 5   2
+```
+
+最后, 我们对索引 0 的节点进行堆化
+
+```
+        9
+      /   \
+     3     8
+    / \   / \
+   7   4 5   2
+```
+
+注意, 要点来了, 为了避免上层堆化过程影响下层堆化, 这里会 **递归的再次调用堆化函数**, 因为我们交换了 0 号节点和 1 号节点, 所以这里会再次检查之前的更大的节点, 即 `largest != root` 时, 我们交换这两个元素的位置, 并且再次检查原来 `largest` 位置, 即原来的元素 `9` 的位置, 交换过后, 现在已经是 `3`, 检查这个父节点下面的子节点是否需要堆化, 然后我们发现确实需要!
+
+```
+        9
+      /   \
+     7     8
+    / \   / \
+   3   4 5   2
+```
+
+为什么在堆化最下层子节点的时候没有提呢, 因为那时候这些最下层子节点已经没有其他子节点了
+
+如此, 我们成功构建了最大堆. 我们不在乎子节点如何排序, 只要满足堆的结构就好, 并且知道此时最大值 9 被我们找到了且放在堆顶
+
+然后我们开始循环提取最大元素, 即在第二个循环的位置
+
+在循环中我们看到, 首先我们交换对顶和最后一个叶子节点
+
+```
+        2
+      /   \
+     7     8
+    / \   /
+   3   4 5   9
+```
+
+现在轮到 `end` 参数发力了, 通过它, 我们将不会在堆化的过程中考虑刚刚被我们找到的最大元素 9, 所以我去掉了那条线, 然后对这个新的堆进行堆化, 过程和上面一样, 我们发现索引 2 (8) 无需变动, 索引 1 (7) 无需变动, 索引 0 (2) 需要变动, 和右边的索引 1 (8) 交换后, 又一次影响到了索引 1 的子树, 我们对其堆化, 得到
+
+```
+        8
+      /   \
+     7     5
+    / \   /
+   3   4 2   9
+```
+
+我们又一次找到了最大的数据 8, 让它和我们保护的位置, 即上一次找到的最大元素的前一个节点交换位置, 得到
+
+```
+        2
+      /   \
+     7     5
+    / \
+   3   4 8   9
+```
+
+可见我们每一次都会将最大元素移动到正确的位置, 同时堆这个结构也能让我们以较低的时间复杂度进行操作, 因为二叉也是一种分而治之
+
+# Timsort
+
+Timsort 是一种混合排序, 结合了不同方案的优点, 在 Java 等语言中作为默认的排序方案, 实现起来比较复杂, 所以这里只给出大致原理和简化版实现
+
+结合了归并排序和插入排序的优点. 它寻找已有序的 **Run**, 用插入排序扩展短 Run, 然后合并 Run
+
+看不懂没关系, 让我尽可能通俗的解释一下
+
+TimSort 就像整理一副扑克牌, 我们先看看能不能找到顺子(**数据中已经有序的小段**), 如果找到的顺子太短了, 就从牌堆里找一找给它补长一点(**通过插入排序补全小段**). 顺子和顺子也许可以凑成更大的顺子, 层层合并, 最终我们就得到了一副排序好的牌
+
+接下来解释一些专有名词
+
+- `Run`: 已经有序的小段
+- `MIN_RUN`: 最小 `Run` 长度, 小于它时使用插入排序
+- 分段排序: 将数组分成 `MIN_RUN` 大小的块并用插入排序
+- 合并阶段：按大小倍增的方式合并相邻的已排序 `Run`
+- `merge` 函数：标准的两路归并，需要克隆元素
+
+这个算法很优秀, 在最差的情况下也能保证 O(nlogn) 的时间复杂度, 对部分有序数据接近O(n)
 
 ```rs
-use std::cmp::Ordering;
+fn tim_sort<T: Ord + Clone>(array: &mut [T]) {
+    const MIN_RUN: usize = 32;  // 最小 Run 长度
 
-// impl TreeNode
-fn insert(&mut self, value: T) {
-    //TODO
-    // 逻辑很清晰, 就像我们之前说的那样, 小值往左走, 大值往右走
-    match value.cmp(&self.value) {
-        Ordering::Less => {
-            // 存在则递归调用
-            if let Some(ref mut left) = self.left {
-                left.insert(value);
-            // 不存在就直接插入
-            } else {
-                self.left = Some(Box::new(TreeNode::new(value)));
+    let len = array.len();
+    if len <= MIN_RUN {  // 小数组直接插入排序
+        // 这个我们之前实现过
+        insertion_sort(array);
+        return;
+    }
+
+    // 将数组分成 MIN_RUN 大小的块并排序
+    for i in (0..len).step_by(MIN_RUN) {
+        let end = std::cmp::min(i + MIN_RUN, len);
+        insertion_sort(&mut array[i..end]);
+    }
+
+    // 合并已排序的 Run
+    // 初始块大小
+    let mut size = MIN_RUN;
+    // 只要块仍然比整个数组小
+    while size < len {
+        // 每次处理两个相邻的块
+        for left in (0..len).step_by(2 * size) {
+            // 计算中间点和右边界
+            // 第一个块的结尾
+            let mid = std::cmp::min(left + size, len);
+            // 第二个块的结尾
+            let right = std::cmp::min(left + 2 * size, len);
+            // 如果有两个块可以合并
+            if mid < right {
+                // 合并它们
+                merge(array, left, mid, right);
             }
         }
-        Ordering::Greater => {
-            if let Some(ref mut right) = self.right {
-                right.insert(value);
-            } else {
-                self.right = Some(Box::new(TreeNode::new(value)));
-            }
-        }
-        Ordering::Equal => {
-            // 重复值处理: 这里我们选择不插入重复值
-            // 也可以根据需求选择其他处理方式
-        }
+        // 每次合并后对小块大小的要求大小翻倍
+        size *= 2;
     }
 }
 
-// 辅助函数
-// 递归查找节点
-fn search(&self, value: T) -> bool {
-    // 搜索也是同理, 小值去左边找, 大值去右边找
-    match value.cmp(&self.value) {
-        Ordering::Less => self.left.as_ref().map_or(false, |left| left.search(value)),
-        Ordering::Greater => self.right.as_ref().map_or(false, |right| right.search(value)),
-        Ordering::Equal => true,
+fn merge<T: Ord + Clone>(array: &mut [T], left: usize, mid: usize, right: usize) {
+    let left_part = array[left..mid].to_vec();  // 复制左半部分
+    let right_part = array[mid..right].to_vec();  // 复制右半部分
+
+    let mut i = 0;  // 左部分索引
+    let mut j = 0;  // 右部分索引
+    let mut k = left;  // 合并位置索引
+
+    // 这和我们合并链表的方式相同
+    // 合并两个已排序数组
+    while i < left_part.len() && j < right_part.len() {
+        if left_part[i] <= right_part[j] {
+            array[k] = left_part[i].clone();
+            i += 1;
+        } else {
+            array[k] = right_part[j].clone();
+            j += 1;
+        }
+        k += 1;
+    }
+
+    // 复制剩余元素
+    while i < left_part.len() {
+        array[k] = left_part[i].clone();
+        i += 1;
+        k += 1;
+    }
+
+    while j < right_part.len() {
+        array[k] = right_part[j].clone();
+        j += 1;
+        k += 1;
     }
 }
 ```
-
-然后我们只需要为上层包装也实现这两个功能即可
-
-```rs
-fn insert(&mut self, value: T) {
-    //TODO
-    if let Some(ref mut root) = self.root {
-        root.insert(value);
-    } else {
-        self.root = Some(Box::new(TreeNode::new(value)));
-    }
-}
-
-fn search(&self, value: T) -> bool {
-    //TODO
-    self.root.as_ref().map_or(false, |root| root.search(value))
-}
-```
-
-就像我们说的, 二叉搜索树非常的简单, 但也非常的基础
