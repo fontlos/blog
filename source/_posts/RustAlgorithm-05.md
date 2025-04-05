@@ -1,8 +1,8 @@
 ---
 feature: false
-title: Rust 数据结构与算法(5) | 堆
-date: 2025-03-27 18:00:00
-abstracts: 堆是一种特殊的完全二叉树数据结构, 我们在之前排序那一节就介绍了堆排序, 那时候我们实现的是一个最大堆, 我们给出了堆的逻辑, 但没给出堆的数据结构, 在这一节中, 我们将实现一种更底层的二叉堆, 并可以自由选择是最大堆还是最小堆模式
+title: Rust 数据结构与算法(5) | 树结构
+date: 2025-03-27 14:00:00
+abstracts: 在这一节中, 我们将接触到几种常见树结构, 从最基本的二叉搜索树开始, 逐步到 AVL 树和红黑树等自平衡树结构
 tags:
     - Rust
 categories:
@@ -10,288 +10,678 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-# 堆
+# 普通二叉搜索树 (Binary Search Tree, BST)
 
-堆是一种特殊的完全二叉树数据结构, 我们在之前 **排序** 那一节就介绍了堆排序, 那时候我们实现的是一个最大堆, 我们给出了堆的逻辑, 但没给出堆的数据结构, 在这一节中, 我们将实现一种更底层的堆, 并可以自由选择是最大堆还是最小堆模式
+有了前面学堆排序的经验, 对二叉树的概念应该有一定了解了
 
-这里我们简单回顾一下
+二叉搜索树是一种特殊的二叉树数据结构, 其中每个节点都满足以下性质
 
-- 对于最大堆(max-heap), 每个节点的值都大于或等于其子节点的值
-- 对于最小堆(min-heap), 每个节点的值都小于或等于其子节点的值
+- 左子树中所有节点的值都小于当前节点的值
+- 右子树中所有节点的值都大于当前节点的值
+- 左右子树也分别是二叉搜索树
 
-堆通常用数组来实现, 因为完全二叉树的特性使得我们可以用简单的索引关系来表示父子节点关系
+二叉树有节点, 有连线, 其实也像是一个图
 
-核心操作
+提到二叉就会提到分而治之的思想, 二叉搜索树具有以下特点
 
-- 插入(Add): `O(log n)`
-- 删除(Next/Extract): `O(log n)`
-- 查看堆顶(Peek): `O(1)`
+- 高效查找: 平均时间复杂度为 O(log n), 比线性结构更高效
+- 动态数据维护: 可以高效地插入和删除数据
+- 有序数据存储: 中序遍历 BST 可以得到有序序列
+- 作为更复杂数据结构的基础: 如 AVL 树, 红黑树等都是基于 BST 的扩展
 
-索引计算: 我们这里以 0 为根节点, 所以实际计算中看上去少加了 1, 以及我们默认不使用 0 号位置, 直接用 0 占位
+二叉搜索树在数据库索引, 文件系统目录结构, 内存中的有序数据存储, 路由算法中的路由表都有很多应用
 
-- 父节点索引: `parent_idx = idx / 2`
-- 左子节点索引: `left_child_idx = idx * 2`
-- 右子节点索引: `right_child_idx = idx * 2 + 1`
+下面我们来从零实现一个二叉搜索树
 
-维护堆的性质关键就在于 **上浮(Swim)** 和 **下沉 (Sink)** 操作, 我们在之前堆排序的时候就已经用到了这些, 就是让我们需要的元素按某种顺序向上移动或向下移动
+## 数据结构定义
 
-至于堆的常见应用, 除开堆排序外, 还有
-
-- 优先队列实现: 一种抽象数据类型, 每个元素都有优先级, 优先级高的元素先出队
-- 图算法中的 Dijkstra(最短路径) 和 Prim(最小生成树) 算法
-- 求 Top K 问题: 从海量数据中找出前 K 大/小的元素
-- 中位数查找问题: 两个堆, 最大堆存较小的一半数, 最小堆存较大的一半数, 保持两堆大小平衡 (差值≤1). 若两堆大小相等, 取两个堆顶的平均值, 否则取元素多的那个堆的堆顶
-
-## 基本数据结构
+那么首先肯定是数据结构, 二叉搜索树的节点类似于双链表, 为了在编译时确定数据类型大小, 我们同样需要使用智能指针将数据分配到堆上, 只不过这次我们不使用 `NonNull`, 而是 `Box` 智能指针, 之前说过, 它是一个胖指针, 存储了更多的元信息, 表示唯一所有权, 适合表示树节点的父子关系, 即父节点销毁时子节点一并销毁. 总之树结构天然适合所有权语义, 不需要频繁的节点共享, 并且使用 `Box` 实现简单且安全
 
 ```rs
-pub struct Heap<T>
+#[derive(Debug)]
+struct TreeNode<T>
 where
-    T: Default,
+    // 要求我们的元素是可排序的
+    T: Ord,
 {
-    count: usize,   // 元素数量
-    items: Vec<T>,  // 实际存储
-    comparator: fn(&T, &T) -> bool, // 比较函数, 用于决定是最大堆还是最小堆
+    value: T,
+    left: Option<Box<TreeNode<T>>>,
+    right: Option<Box<TreeNode<T>>>,
 }
-```
 
-然后根据上面的定义, 我们给出基本方法
-
-```rs
-impl<T> Heap<T>
+impl<T> TreeNode<T>
 where
-    T: Default,
+    T: Ord,
 {
-    pub fn new(comparator: fn(&T, &T) -> bool) -> Self {
-        Self {
-            count: 0,
-            // 初始化时用默认值占位, 所以我们需要的堆顶在 1 号位置
-            items: vec![T::default()],
-            comparator,
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.count
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    fn parent_idx(&self, idx: usize) -> usize {
-        idx / 2
-    }
-
-    // 检查给定节点是否有至少一个子节点, 对于上浮和下沉操作至关重要
-    // 左子节点不存在那么一定不存在右子节点
-    fn children_present(&self, idx: usize) -> bool {
-        self.left_child_idx(idx) <= self.count
-    }
-
-    fn left_child_idx(&self, idx: usize) -> usize {
-        idx * 2
-    }
-
-    fn right_child_idx(&self, idx: usize) -> usize {
-        self.left_child_idx(idx) + 1
-    }
-}
-```
-
-因为我们这里的堆是从零构建的, 和之前堆排序自下而上堆化不同, 我们只要在每次插入或弹出新元素时就维护好堆的秩序即可(即上浮下沉)
-
-那么这里给出添加新元素的方法, 在这里我们首先将元素添加到末尾, 然后层层比较, 让元素上浮, 最终位于正确位置. 之前堆排序我们使用递归, 那么这次我们就使用循环来解决
-
-```rs
-pub fn add(&mut self, value: T) {
-    self.items.push(value);
-    self.count += 1;
-    let mut idx = self.count;  // 新元素的索引
-
-    // 上浮过程
-    while idx > 1 {
-        let parent_idx = self.parent_idx(idx);
-        // 调用比较函数
-        if (self.comparator)(&self.items[idx], &self.items[parent_idx]) {
-            self.items.swap(idx, parent_idx);
-            // 如果一直能比较, 那么最多比较到节点 1 比较就结束了
-            idx = parent_idx;
-        } else {
-            // 如果以及找到正确位置了, 那么就停下来
-            break;
+    fn new(value: T) -> Self {
+        TreeNode {
+            value,
+            left: None,
+            right: None,
         }
     }
 }
 ```
 
-我们用一段例子来解释这个过程, 加入有一个如下的最小堆
-
-```
-       1 (idx = 1)
-     /   \
-    3     5 (idx = 3)
-   / \
-  4   8 (idx = 4,5)
-```
-
-现在插入数据 2
-
-```
-      1
-    /   \
-   3     5
-  / \   /
- 4   8 2 (idx = 6)
-```
-
-比较 idx(6) 和父节点 idx(3), 发现需要上浮, 交换
-
-```
-      1
-    /   \
-   3     2 (idx = 3)
-  / \   /
- 4   8 5 (idx = 6) 这里交换了节点索引
-```
-
-然后继续尝试和父节点比较, 发现无需移动, 节点插入成功
-
-然后, 为了能更好的访问堆, 比如我们可能需要按从大到小的顺序读取堆的元素, 我们可能需要对它进行迭代, 所以我们也为堆实现一个迭代器 Trait, 不过在此之前, 我们还需要实现一个方法, 用于找到当前节点最小(或最大)的子节点, 函数名是题目中给出来的, 我就不改了. 这个方法对于实现下沉操作很重要, 而实现迭代器就需要这种下沉操作
+类似链表, 我们也需要一个结构来表示树根
 
 ```rs
-fn smallest_child_idx(&self, idx: usize) -> usize {
-    let left = self.left_child_idx(idx);
-    let right = self.right_child_idx(idx);
-
-    // 右节点不存在那么左节点就是, 不论是找最大的还是最小的
-    if right > self.count {
-        left
-    } else {
-        // 调用我们的比较函数, 也许是找小的, 也许是找大的
-        if (self.comparator)(&self.items[left], &self.items[right]) {
-            left
-        } else {
-            right
-        }
-    }
-}
-```
-
-现在我们可以实现一个迭代器了, 先给出代码
-
-```rs
-impl<T> Iterator for Heap<T>
+#[derive(Debug)]
+struct BinarySearchTree<T>
 where
-    T: Default,
+    T: Ord,
 {
-    type Item = T;
+    root: Option<Box<TreeNode<T>>>,
+}
 
-    // 取出堆顶元素 (索引1的元素)
-    // 此时堆没有顶部节点了, 所以将最后一个元素移到堆顶, 简单方便
-    // 执行 "下沉"(sink) 操作, 恢复堆的性质
-    fn next(&mut self) -> Option<T> {
-        //TODO
-        if self.count == 0 {
-            return None;
-        }
+impl<T> BinarySearchTree<T>
+where
+    T: Ord,
+{
+    fn new() -> Self {
+        BinarySearchTree { root: None }
+    }
+}
+```
 
-        // 取出堆顶元素
-        let top = self.items.swap_remove(1);
-        self.count -= 1;
+## 基本功能实现
 
-        if self.count > 0 {
-            // 下沉过程
-            let mut idx = 1;
-            while self.children_present(idx) {
-                let child_idx = self.smallest_child_idx(idx);
-                if !(self.comparator)(&self.items[idx], &self.items[child_idx]) {
-                    self.items.swap(idx, child_idx);
-                    idx = child_idx;
-                } else {
-                    break;
-                }
+基本结构并不复杂, 接下来我们为其实现插入和搜索这两个最基本的功能, 至于修改和删除, 就交给读者自行实现
+
+我们首先为树节点实现这两个功能, 因为树根本质上就是树节点的包装
+
+```rs
+use std::cmp::Ordering;
+
+// impl TreeNode
+fn insert(&mut self, value: T) {
+    //TODO
+    // 逻辑很清晰, 就像我们之前说的那样, 小值往左走, 大值往右走
+    match value.cmp(&self.value) {
+        Ordering::Less => {
+            // 存在则递归调用
+            if let Some(ref mut left) = self.left {
+                left.insert(value);
+            // 不存在就直接插入
+            } else {
+                self.left = Some(Box::new(TreeNode::new(value)));
             }
         }
+        Ordering::Greater => {
+            if let Some(ref mut right) = self.right {
+                right.insert(value);
+            } else {
+                self.right = Some(Box::new(TreeNode::new(value)));
+            }
+        }
+        Ordering::Equal => {
+            // 重复值处理: 这里我们选择不插入重复值
+            // 也可以根据需求选择其他处理方式
+        }
+    }
+}
 
-        Some(top)
+// 辅助函数
+// 递归查找节点
+fn search(&self, value: T) -> bool {
+    // 搜索也是同理, 小值去左边找, 大值去右边找
+    match value.cmp(&self.value) {
+        Ordering::Less => self.left.as_ref().map_or(false, |left| left.search(value)),
+        Ordering::Greater => self.right.as_ref().map_or(false, |right| right.search(value)),
+        Ordering::Equal => true,
     }
 }
 ```
 
-我们还是给出一个示例来, 依然是之前的最小堆
-
-```
-       1
-     /   \
-    3     2
-   / \   /
-  4   8 5
-```
-
-首先弹出 idx(1), 即数据 1, 然后用最后一个元素 idx(6) 即数据 5 来替代原来堆顶的位置
-
-```
-       5
-     /   \
-    3     2
-   / \
-  4   8
-```
-
-然后我们需要自上而下的比较这对堆造成的影响, 把错误的元素进行下沉, 首先比较 idx(1) 和它的最小的子节点 idx(3) 即 2, 发现需要移动
-
-```
-       2
-     /   \
-    3     5 (交换节点序号)
-   / \
-  4   8
-```
-
-然后检查移动过的节点, 这里是 idx(3), 看看之前的移动有没有破坏它的只需, 发现并没有, 因为它已经没有子节点了, 即使有也会循环继续交换. 因此此时堆已经恢复秩序, 无需调整
-
-最后, 我们只需要再用一些结构包裹这个堆, 就可以实现具体的最大堆和最小堆了
+然后我们只需要为上层包装也实现这两个功能即可
 
 ```rs
-pub struct MinHeap;
-
-impl MinHeap {
-    #[allow(clippy::new_ret_no_self)]
-    pub fn new<T>() -> Heap<T>
-    where
-        T: Default + Ord,
-    {
-        Heap::new(|a, b| a < b)
+fn insert(&mut self, value: T) {
+    //TODO
+    if let Some(ref mut root) = self.root {
+        root.insert(value);
+    } else {
+        self.root = Some(Box::new(TreeNode::new(value)));
     }
 }
 
-pub struct MaxHeap;
+fn search(&self, value: T) -> bool {
+    //TODO
+    self.root.as_ref().map_or(false, |root| root.search(value))
+}
+```
 
-impl MaxHeap {
-    #[allow(clippy::new_ret_no_self)]
-    pub fn new<T>() -> Heap<T>
-    where
-        T: Default + Ord,
-    {
-        Heap::new(|a, b| a > b)
-    }
+就像我们说的, 二叉搜索树非常的简单, 但也非常的基础
+
+# 什么是自平衡二叉搜索树
+
+了解了普通的二叉搜索树, 下面我们可以进一步认识 **自平衡** 二叉搜索树了, 所谓自平衡, 就是通过一系列操作, 使树结构整体尽可能对称平衡
+
+为什么需要自平衡二叉搜索树?
+
+普通 BST 在极端情况下会退化成链表 (时间复杂度从O(log n) → O(n)), 例如按顺序插入 `1, 2, 3, 4, 5`, 这将永远插入右侧节点, 形成一条长链
+
+而自平衡二叉搜索树通过 **自动调整树的结构** (旋转, 重新着色等操作), 始终保持树的平衡性, 确保最坏情况下操作时间复杂度仍为 O(log n)
+
+这里我们主要介绍两种, **AVL 树** 与 **红黑树** (其中 AVL 只是发明人名字的缩写, 纪念 **G.M. Adelson-Velsky 和 E.M. Landis** 首次提出平衡二叉树的概念)
+
+| 特性             | AVL树                      | 红黑树                  |
+|-----------------|----------------------------|------------------------|
+| 平衡标准         | 严格平衡 (左右子树高度差≤1)    | 弱平衡 (最长路径≤2倍最短路径) |
+| 旋转频率         | 高 (插入/删除可能频繁调整)     | 低 (颜色翻转多于旋转)        |
+| 查找效率         | 更优 (严格平衡)              | 稍逊                       |
+| 插入/删除效率    | 平均需要更多旋转               | 更快 (适合频繁修改的场景)    |
+| 典型应用         | 需要快速查找的场景             | 需要频繁插入删除的场景      |
+
+# AVL 树
+
+AVL 树依靠**平衡因子 (Balance Factor)** 来调整树的结构, 其中 `balance_factor = height(left) - height(right) ∈ {-1, 0, 1}`, 当插入/删除导致 ``|balance_factor| > 1`` 时, 通过 **旋转** 恢复平衡
+
+我们先来介绍何为旋转,首先容易想到我们有四种旋转场景
+
+|失衡情况|旋转方式|示意图|
+|-----------------|--------------|------------------------|
+|左子树更高且左左插入|  右旋         |  `[y] → [x]` 的左左结构|
+|右子树更高且右右插入|  左旋         |  `[x] → [y]` 的右右结构|
+|左子树更高且左右插入|  先左旋再右旋  |  `[z] → [y] → [x]` 的左右结构|
+|右子树更高且右左插入|  先右旋再左旋  |  `[x] → [y] → [z]` 的右左结构|
+
+先看两个含子树的完整过程
+
+```
+左子树 y 失衡
+       y (bf=2)
+      /
+     x (bf=1)
+    / \
+   z   s
+
+右旋, 新根右子节点成为原根左子节点
+     x
+    / \
+   z   y
+      /
+     s
+
+想象一下, y 垂了下来, 但 x 不能下分三个节点, 于是 s 顺势断开, 向右依附到 y 上
+```
+
+```
+右子树 x 失衡
+   x (bf=-2)
+    \
+     y (bf=-1)
+    / \
+   s   z
+
+左旋
+     y
+    / \
+   x   z
+    \
+     s
+```
+
+不过因为我们这里只实现插入操作, 所以你在实际操作中没有那么多子树, 看起来就像是之发生了节点位置旋转而没发生子树重新挂载, 比如对于下面这种情况的简化过程
+
+```
+z 失衡, 先左后右
+     z (bf=2)
+    /
+   x (bf=-1)
+    \
+     y
+
+先对 x 左旋后
+     z
+    /
+   y
+  /
+ x
+
+再对 z 右旋后
+     y
+    / \
+   x   z
+```
+
+## 数据结构扩展
+
+首先给我们的原始结构新增字段代表子树的高度
+
+```rs
+#[derive(Debug)]
+struct TreeNode<T: Ord> {
+    value: T,
+    left: Option<Box<TreeNode<T>>>,
+    right: Option<Box<TreeNode<T>>>,
+    height: usize, // 新增: 节点高度
 }
 
-// 或者
-
-impl<T> Heap<T>
+impl<T> TreeNode<T>
 where
-    T: Default + Ord,
+    T: Ord,
 {
-    /// Create a new MinHeap
-    pub fn new_min() -> Self {
-        Self::new(|a, b| a < b)
+    fn new(value: T) -> Self {
+        TreeNode {
+            value,
+            left: None,
+            right: None,
+            height: 1,
+        }
+    }
+}
+```
+
+## 旋转相关操作
+
+接下来我们实现具体功能, 一旦理解了 AVL 树的思想, 实现方案就不难了, 下面的内容都是为 `TreeNode` 实现的
+
+首先是关于树高度的一些操作
+
+```rs
+/// 子树高度
+fn height(node: &Option<Box<TreeNode<T>>>) -> usize {
+    // 空节点高度为 0
+    node.as_ref().map_or(0, |n| n.height)
+}
+/// 更新节点高度
+fn update_height(&mut self) {
+    self.height = 1 + Self::height(&self.left).max(Self::height(&self.right));
+}
+```
+
+然后是计算平衡因子, 算法很简单
+
+```rs
+fn balance_factor(&self) -> i32 {
+    Self::height(&self.left) as i32 - Self::height(&self.right) as i32
+}
+```
+
+然后我们实现上述的那些旋转操作, 实际上只需要左旋和右旋, 另外两种可以组合得到
+
+```rs
+/// 右旋操作
+fn rotate_right(mut self: Box<TreeNode<T>>) -> Box<TreeNode<T>> {
+    // 用左节点作为新的子树树根
+    let mut new_root = self.left.take().unwrap();
+    self.left = new_root.right.take();
+    self.update_height();
+    new_root.right = Some(self);
+    new_root.update_height();
+    new_root
+}
+
+/// 左旋操作
+fn rotate_left(mut self: Box<TreeNode<T>>) -> Box<TreeNode<T>> {
+    let mut new_root = self.right.take().unwrap();
+    self.right = new_root.left.take();
+    self.update_height();
+    new_root.left = Some(self);
+    new_root.update_height();
+    new_root
+}
+```
+
+然后是具体的旋转逻辑
+
+```rs
+/// 平衡调整主逻辑
+fn balance(mut self: Box<TreeNode<T>>) -> Box<TreeNode<T>> {
+    let bf = self.balance_factor();
+    // Left-Left 情况
+    // 左子树更高且左子树的左子树不矮
+    if bf > 1 && self.left.as_ref().unwrap().balance_factor() >= 0 {
+        return self.rotate_right();
+    }
+    // Left-Right 情况
+    // 左子树更高且左子树的右子树更高
+    if bf > 1 && self.left.as_ref().unwrap().balance_factor() < 0 {
+        self.left = Some(self.left.take().unwrap().rotate_left());
+        return self.rotate_right();
+    }
+    // Right-Right 情况
+    // 右子树更高且右子树的右子树不矮
+    if bf < -1 && self.right.as_ref().unwrap().balance_factor() <= 0 {
+        return self.rotate_left();
+    }
+    // Right-Left 情况
+    // 右子树更高且右子树的左子树更高
+    if bf < -1 && self.right.as_ref().unwrap().balance_factor() > 0 {
+        self.right = Some(self.right.take().unwrap().rotate_right());
+        return self.rotate_left();
     }
 
-    /// Create a new MaxHeap
-    pub fn new_max() -> Self {
-        Self::new(|a, b| a > b)
+    // 无需旋转
+    self
+}
+```
+
+## 添加新的接口
+
+最后提供一个接口用于插入新元素
+
+```rs
+/// AVL树专用插入方法
+/// 因为每次插入的平衡操作可能会消耗掉原根节点, 所以我们需要返回新的根节点
+fn insert_avl(mut self: Box<TreeNode<T>>, value: T) -> Box<TreeNode<T>> {
+    // 1. 标准BST插入
+    match value.cmp(&self.value) {
+        Ordering::Less => {
+            self.left = match self.left {
+                Some(left) => Some(left.insert_avl(value)),
+                None => Some(Box::new(TreeNode::new(value))),
+            };
+        }
+        Ordering::Greater => {
+            self.right = match self.right {
+                Some(right) => Some(right.insert_avl(value)),
+                None => Some(Box::new(TreeNode::new(value))),
+            };
+        }
+        Ordering::Equal => return self, // 重复值不插入
+    };
+
+    // 2. 更新当前节点高度
+    self.update_height();
+
+    // 3. 平衡调整
+    self.balance()
+}
+
+// 别忘了在 BinarySearchTree 结构同样提供一个接口
+
+/// AVL 树插入入口
+pub fn insert_avl(&mut self, value: T) {
+    self.root = match self.root.take() {
+        Some(root) => Some(root.insert_avl(value)),
+        None => Some(Box::new(TreeNode::new(value))),
+    };
+}
+```
+
+然后我们可以尝试一些测试
+
+```rs
+#[test]
+fn test_avl_insert() {
+    let mut avl = BinarySearchTree::new();
+    avl.insert_avl(3);
+    avl.insert_avl(2);
+    avl.insert_avl(1); // 触发右旋
+    assert_eq!(avl.root.as_ref().unwrap().value, 2);
+    assert_eq!(avl.root.as_ref().unwrap().height, 2);
+
+    avl.insert_avl(4);
+    avl.insert_avl(5); // 触发左旋
+    assert_eq!(avl.root.as_ref().unwrap().right.as_ref().unwrap().value, 4);
+}
+```
+
+# 红黑树
+
+其实红黑树顾名思义, 就是对节点提出了颜色的概念, 相比AVL树的严格平衡, 红黑树提供了一种弱平衡方案, 仍且能保证插入/删除平均只需O(1)次旋转和 O(log n) 的查询效率
+
+红黑树有如下五条约束
+
+- 每个节点是红色或黑色
+- 根节点必须是黑色
+- 所有叶子节点 (特殊的 Nil 节点, 只作为占位符) 是黑色
+- 红色节点的子节点必须为黑色 (不能有连续红节点)
+- 从任一节点到其叶子节点的路径包含相同数量的黑色节点 (不包含节点自身, 但包含叶子节点)(黑高相同)
+
+红黑树的本质实际上是一种多叉树 2-3-4 树 的二叉等价形式, 不过在这里我们不细究了, 只是简单介绍一下为什么这五条原则能保证红黑树的弱平衡, 以及操作的具体细节
+
+这五条约束的目的是尝试在严格平衡 (AVL) 和完全不平衡 (普通BST) 之间找到一个平衡, 允许最长路径(红黑相间)不超过最短路径(纯黑)的 2 倍, 通过颜色约束 (无连续红节点) 和黑高一致保证基本平衡
+
+- 根节点黑: 所有路径起点一致
+- 红节点子节点黑: 控制路径膨胀
+- 黑高相同: 限制最长路径 (平衡核心)
+
+红黑树同样拥有旋转操作, 旋转的触发条件就取决于上述约束, 不过除了旋转, 红黑树还需要 **修复**, 就如同堆需要堆化来维持堆的性质, 红黑树也需要颜色修复来维持红黑树的性质, 并且修复的触发条件拥有优先级
+
+旋转过程中可以遵循两条规则
+
+- 新根继承原根颜色: 维持全局颜色分布
+- 原根降级为红色: 避免黑高增加
+
+1. 左倾修复 (Left-Leaning Fix)
+    - 条件: 当前节点的右子为红且左子为黑
+    - 操作: 左旋当前节点
+    - 目的: 将右红子节点转为左红, 维持左倾倾向
+    - 理由: 红黑树倾向于左倾结构, 右红子节点可能导致后续插入破坏平衡
+
+```
+旋转, 并将新根左节点挂在原根右节点
+修复前:
+      B [z]
+       \
+       R [y]
+      /
+    R [x]
+
+左旋后:
+      B [y]
+     /
+   R [z]
+     \
+      R [x]
+```
+
+2. 连续左红修复 (Left-Red Conflict)
+    - 条件: 当前节点的左子和左孙均为红
+    - 操作: 右旋当前节点
+    - 目的: 消除连续左红节点 (对应 2-3 树中临时 4-节点)
+    - 理由: 连续两个左红节点会导致黑高计算失衡, 右旋将其转为平衡的临时 4-节点结构
+
+```
+旋转, 并将新根右节点挂在原根左节点
+修复前:
+      B [z]
+     /
+   R [y]
+   /
+ R [x]
+
+右旋后:
+      B [y]
+        \
+       R [z]
+        /
+      R [x]
+```
+
+3. 颜色翻转 (Color Flip)
+    - 条件: 当前节点的左右子节点均为红
+    - 操作: 将子节点变黑, 当前节点变红
+    - 目的: 模拟 2-3-4 树的节点分裂
+    - 理由: 将临时 4-节点 (两个红子) 拆分为三个 2-节点, 红色上溢可能传递到上层继续修复
+
+```
+翻转前:
+      B [y]
+     / \
+   R [x] R [z]
+
+翻转后:
+      R [y]
+     / \
+   B [x] B [z]
+```
+
+下面是一段完整过程, 插入 `[3, 1, 5, 2]`, 同样因为我们这里只实现插入操作, 在实际操作中没有那么多子树, 看起来就像是之发生了节点位置旋转而没发生子树重新挂载
+
+```
+我们先让新节点默认为红色
+R3
+
+然后强制根节点为黑色
+B3
+
+插入新节点, 仍然默认为红色
+  B3
+ /
+R1
+
+再插入新节点
+  B3
+ / \
+R1 R5
+
+触发操作 3, 左右子节点都为红色, 反转颜色
+  R3
+ / \
+B1 B5
+
+然后强制根节点为黑色
+  B3
+ / \
+B1 B5
+
+插入最后一个节点, 触发左旋, B1 节点的右子为红且左子为黑(Nil)
+    B3
+   / \
+  B1 B5
+   \
+   R2
+
+左旋
+    B3
+   / \
+  R2 B5
+ /
+B1
+```
+
+## 数据结构扩展
+
+我们还是从原始的二叉搜索树开始, 首先扩展数据结构
+
+```rs
+#[derive(Debug, PartialEq)]
+enum Color {
+    Red,
+    Black,
+}
+
+#[derive(Debug)]
+struct TreeNode<T: Ord> {
+    value: T,
+    left: Option<Box<TreeNode<T>>>,
+    right: Option<Box<TreeNode<T>>>,
+    color: Color, // 新增颜色标记
+}
+
+impl<T: Ord> TreeNode<T> {
+    fn new(value: T) -> Self {
+        TreeNode {
+            value,
+            left: None,
+            right: None,
+            color: Color::Red, // 新节点默认为红色
+        }
+    }
+}
+```
+
+## 旋转与修复
+
+同样的, 接下来我们要在 `TreeNode` 上实现一系列操作
+
+```rs
+/// 判断节点是否为红色 (空节点视为黑色)
+fn is_red(node: &Option<Box<Self>>) -> bool {
+    node.as_ref().map_or(false, |n| n.color == Color::Red)
+}
+
+/// 修复红黑树性质的三种情况
+fn fixup(mut self: Box<Self>) -> Box<Self> {
+    // 右子红且左子黑
+    if Self::is_red(&self.right) && !Self::is_red(&self.left) {
+        self = self.rotate_left();
+    }
+    // 左子红且左子的左子红
+    if Self::is_red(&self.left) && Self::is_red(&self.left.as_ref().unwrap().left) {
+        self = self.rotate_right();
+    }
+    // 左右子均红
+    if Self::is_red(&self.left) && Self::is_red(&self.right) {
+        self.flip_colors();
+    }
+    self
+}
+
+/// 左旋操作
+fn rotate_left(mut self: Box<Self>) -> Box<Self> {
+    let mut new_root = self.right.take().unwrap();
+    self.right = new_root.left.take();
+    new_root.color = self.color;
+    self.color = Color::Red;
+    new_root.left = Some(self);
+    new_root
+}
+
+/// 右旋操作
+fn rotate_right(mut self: Box<Self>) -> Box<Self> {
+    let mut new_root = self.left.take().unwrap();
+    self.left = new_root.right.take();
+    new_root.color = self.color;
+    self.color = Color::Red;
+    new_root.right = Some(self);
+    new_root
+}
+
+/// 颜色翻转
+fn flip_colors(&mut self) {
+    self.color = match self.color {
+        Color::Red => Color::Black,
+        Color::Black => Color::Red,
+    };
+    self.left.as_mut().unwrap().color = Color::Black;
+    self.right.as_mut().unwrap().color = Color::Black;
+}
+```
+
+## 添加新的接口
+
+最后同样提供一个接口用于插入新元素
+
+```rs
+/// 红黑树插入入口
+pub fn insert_rb(mut self: Box<Self>, value: T) -> Box<Self> {
+    match value.cmp(&self.value) {
+        Ordering::Less => {
+            self.left = match self.left {
+                Some(left) => Some(left.insert_rb(value)),
+                None => Some(Box::new(Self::new(value))),
+            };
+        }
+        Ordering::Greater => {
+            self.right = match self.right {
+                Some(right) => Some(right.insert_rb(value)),
+                None => Some(Box::new(Self::new(value))),
+            };
+        }
+        Ordering::Equal => return self, // 重复值不插入
+    }
+    self.fixup() // 插入后修复红黑树性质
+}
+
+// 别忘了在 BinarySearchTree 结构同样提供一个接口
+
+pub fn insert_rb(&mut self, value: T) {
+    match self.root.take() {
+        Some(root) => {
+            let mut new_root = root.insert_rb(value);
+            new_root.color = Color::Black; // 根节点始终为黑
+            self.root = Some(new_root);
+        }
+        None => {
+            let mut node = TreeNode::new(value);
+            node.color = Color::Black; // 根节点强制为黑
+            self.root = Some(Box::new(node));
+        }
     }
 }
 ```
