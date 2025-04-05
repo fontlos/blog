@@ -685,3 +685,34 @@ pub fn insert_rb(&mut self, value: T) {
     }
 }
 ```
+
+最后我们也给出一个简单示例
+
+```rs
+#[test]
+fn test_rb_insert() {
+    let mut tree = BinarySearchTree::new();
+    tree.insert_rb(3);
+    tree.insert_rb(1);
+    tree.insert_rb(5);
+    tree.insert_rb(2);
+
+    // 验证根节点为黑
+    assert_eq!(tree.root.as_ref().unwrap().color, Color::Black);
+
+    // 验证无连续红节点
+    fn check_rb_properties<T: Ord>(node: &Option<Box<TreeNode<T>>>) -> bool {
+        node.as_ref().map_or(true, |n| {
+            let no_double_red = n.color != Color::Red ||
+                (TreeNode::is_red(&n.left) == false &&
+                TreeNode::is_red(&n.right) == false);
+            no_double_red && check_rb_properties(&n.left) && check_rb_properties(&n.right)
+        })
+    }
+    assert!(check_rb_properties(&tree.root));
+}
+```
+
+---
+
+对于 AVL 树和红黑树我们只实现了插入操作, 对于搜索完全可以复用普通二叉树, 但是删除操作可能也会破坏树的性质, 需要额外操作维护, 这一点交给读者自行尝试
