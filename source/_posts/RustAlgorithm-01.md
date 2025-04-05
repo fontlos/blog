@@ -10,7 +10,7 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-这是一个非计算机专业的 Rust 数据结构与算法教程, 基于 LearningOS/rustling-classroom-2025s-rustling-25S-template 的十道算法题, 并且重新调整了课程顺序. 过程中算法题部分的完整代码在 [fontlos/rustlings-algorithm-2025S](https://github.com/fontlos/rustlings-algorithm-2025S)
+这是一个非计算机专业的 Rust 数据结构与算法教程, 基于 [LearningOS/rustling-classroom-2025s-rustling-25S-template](https://github.com/LearningOS/rustling-classroom-2025s-rustling-25S-template) 的十道算法题, 并且重新调整了课程顺序. 过程中算法题部分的完整代码在 [fontlos/rustlings-algorithm-2025S](https://github.com/fontlos/rustlings-algorithm-2025S)
 
 都来学习 Rust 了, 那么对于堆栈不说了解也应该是听说过了. 接下来让我们先从比较简单的栈结构来学习, 栈是最基础的线性结构之一, 我们可以复用原生 Rust 的多数功能. 在这一节中, 我们将介绍栈的概念, 如何实现一个基本的栈和其他相关功能, 包括数组实现的方案和队列实现的栈, 最后我们再根据栈实现一个更好的队列
 
