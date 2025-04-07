@@ -10,7 +10,7 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-链表和数组, 栈一样是一种线性数据结构, 不过由于 Rust 的安全规则不允许我们实现自身嵌套的数据结构, 因此我们将会接触到 Unsafe Rust 的世界, 同时也会接触到 Rust 零成本抽象特点, 因此我将这一节往后调整了一些
+链表和数组, 栈一样是一种线性数据结构, 不过由于 Rust 的安全规则不允许我们实现自身嵌套的数据结构, 因此我们将会接触到 **Unsafe Rust** 的世界, 同时也会接触到 Rust 零成本抽象特点, 因此我将这一节往后调整了一些
 
 # 链表
 
@@ -19,7 +19,7 @@ cover: https://fontlos.com/cover/ferris.png
 链表拥有以下特点
 
 - **动态大小**: 链表可以动态增长和缩小, 不像数组需要预先分配固定大小
-- **高效插入/删除**: 在链表中插入或删除节点只需修改指针, 时间复杂度为O(1) (在已知位置时)
+- **高效插入/删除**: 在链表中插入或删除节点只需修改指针, 时间复杂度为 `O(1)` (在已知位置时)
 - **内存利用率**: 不需要连续内存空间, 可以更灵活地利用内存
 
 链表实现要点
@@ -37,7 +37,7 @@ cover: https://fontlos.com/cover/ferris.png
 - **节点(Node)**: 包含 **数据(val)** 和指向下一个节点的 **指针(next)**
 - **链表结构(LinkedList)**: 通常包含 **头指针(start), 尾指针(end) 和长度(length)** 等信息
 
-## `NonNull<T>`
+## NonNull
 
 在构建数据结构之前先来认识一个智能指针
 
@@ -316,7 +316,31 @@ pub fn merge(list_a: LinkedList<T>, list_b: LinkedList<T>) -> Self
 }
 ```
 
-逻辑比较清晰, 关键内容写在注释里了
+逻辑比较清晰, 关键内容写在注释里了, 最后可以给一段简单的测试函数
+
+```rs
+#[test]
+fn test_merge_linked_list_1() {
+    let mut list_a = LinkedList::<i32>::new();
+    let mut list_b = LinkedList::<i32>::new();
+    let vec_a = vec![1, 3, 5, 7];
+    let vec_b = vec![2, 4, 6, 8];
+    let target_vec = vec![1, 2, 3, 4, 5, 6, 7, 8];
+
+    for i in 0..vec_a.len() {
+        list_a.add(vec_a[i]);
+    }
+    for i in 0..vec_b.len() {
+        list_b.add(vec_b[i]);
+    }
+    println!("list a {} list b {}", list_a, list_b);
+    let mut list_c = LinkedList::<i32>::merge(list_a, list_b);
+    println!("merged List is {}", list_c);
+    for i in 0..target_vec.len() {
+        assert_eq!(target_vec[i], *list_c.get(i as i32).unwrap());
+    }
+}
+```
 
 ## 为链表实现一些其他功能
 
