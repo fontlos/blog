@@ -28,7 +28,7 @@ cover: https://fontlos.com/cover/ferris.png
 - 删除(Next/Extract): `O(log n)`
 - 查看堆顶(Peek): `O(1)`
 
-索引计算: 我们这里以 0 为根节点, 所以实际计算中看上去少加了 1, 以及我们默认不使用 0 号位置, 直接用 0 占位
+索引计算: 我们这里以 `0` 为根节点, 所以实际计算中看上去少加了 `1`, 以及我们默认不使用 `0` 号位置, 直接用默认值占位
 
 - 父节点索引: `parent_idx = idx / 2`
 - 左子节点索引: `left_child_idx = idx * 2`
@@ -39,9 +39,9 @@ cover: https://fontlos.com/cover/ferris.png
 至于堆的常见应用, 除开堆排序外, 还有
 
 - 优先队列实现: 一种抽象数据类型, 每个元素都有优先级, 优先级高的元素先出队
-- 图算法中的 Dijkstra(最短路径) 和 Prim(最小生成树) 算法
-- 求 Top K 问题: 从海量数据中找出前 K 大/小的元素
-- 中位数查找问题: 两个堆, 最大堆存较小的一半数, 最小堆存较大的一半数, 保持两堆大小平衡 (差值≤1). 若两堆大小相等, 取两个堆顶的平均值, 否则取元素多的那个堆的堆顶
+- 图算法中的 **Dijkstra (最短路径)** 和 **Prim (最小生成树)** 算法
+- 求 **Top K** 问题: 从海量数据中找出前 `K` 大/小的元素
+- 中位数查找问题: 两个堆, 最大堆存较小的一半数, 最小堆存较大的一半数, 保持两堆大小平衡 (差值 ≤ 1). 若两堆大小相等, 取两个堆顶的平均值, 否则取元素多的那个堆的堆顶
 
 ## 基本数据结构与基本方法
 
@@ -53,6 +53,7 @@ where
     count: usize,   // 元素数量
     items: Vec<T>,  // 实际存储
     comparator: fn(&T, &T) -> bool, // 比较函数, 用于决定是最大堆还是最小堆
+    // 这是题目中给定的定义
 }
 ```
 
@@ -102,7 +103,7 @@ where
 
 ## 关键方法实现
 
-因为我们这里的堆是从零构建的, 和堆排序自下而上堆化不同, 我们只要在每次插入或弹出新元素时就维护好堆的秩序即可(即上浮下沉)
+因为我们这里的堆是从零构建的, 和堆排序自下而上堆化不同, 我们只要在每次插入或弹出新元素时就维护好堆的秩序即可 (即上浮下沉)
 
 那么这里给出添加新元素的方法, 在这里我们首先将元素添加到末尾, 然后层层比较, 让元素上浮, 最终位于正确位置. 这次我们就使用循环来解决, 而在后面的堆排序中我们会使用递归的方式
 
@@ -128,7 +129,7 @@ pub fn add(&mut self, value: T) {
 }
 ```
 
-我们用一段例子来解释这个过程, 加入有一个如下的最小堆
+我们用一段例子来解释这个过程, 比如有一个如下的最小堆
 
 ```
        1 (idx = 1)
@@ -169,7 +170,7 @@ fn smallest_child_idx(&self, idx: usize) -> usize {
     let left = self.left_child_idx(idx);
     let right = self.right_child_idx(idx);
 
-    // 右节点不存在那么左节点就是, 不论是找最大的还是最小的
+    // 右节点不存在那么左节点就是我们需要的, 不论是找最大的还是最小的
     if right > self.count {
         left
     } else {
@@ -202,14 +203,19 @@ where
         }
 
         // 取出堆顶元素
+        // 与 remove 不同, swap_remove 将取出指定元素并使用最后一个元素取代它, 而不是移动后续所有元素
+        // 有更高的性能, 平均 O(1)
         let top = self.items.swap_remove(1);
         self.count -= 1;
 
         if self.count > 0 {
-            // 下沉过程
+            // 下沉过程, 从堆顶开始
             let mut idx = 1;
+            // 如果存在子节点
             while self.children_present(idx) {
+                // 获取我们需要的最大或最小子节点
                 let child_idx = self.smallest_child_idx(idx);
+                // 如果符合要求就下沉
                 if !(self.comparator)(&self.items[idx], &self.items[child_idx]) {
                     self.items.swap(idx, child_idx);
                     idx = child_idx;
@@ -234,7 +240,7 @@ where
   4   8 5
 ```
 
-首先弹出 idx(1), 即数据 1, 然后用最后一个元素 idx(6) 即数据 5 来替代原来堆顶的位置
+首先弹出 `idx(1)`, 即数据 1, 然后用最后一个元素 idx(6) 即数据 5 来替代原来堆顶的位置
 
 ```
        5
@@ -306,7 +312,7 @@ where
 最后让我们使用我们的堆结构实现一个 Top-K-Min 函数, 找出一组数值之中最小的 K 个值
 
 ```rs
-/// 获取最小的K个元素
+/// 获取最小的 K 个元素
 pub fn top_k_min<T: Ord + Default>(nums: Vec<T>, k: usize) -> Vec<T> {
     if k == 0 || nums.is_empty() {
         return vec![];
@@ -318,6 +324,7 @@ pub fn top_k_min<T: Ord + Default>(nums: Vec<T>, k: usize) -> Vec<T> {
         if heap.len() < k {
             heap.add(num);
         } else {
+            // 只要比堆顶小就踢掉堆顶自己成为新的堆顶. 然后重新堆化
             if &num < heap.items.get(1).unwrap() {
                 heap.next(); // 移除当前堆顶
                 heap.add(num);
@@ -325,6 +332,7 @@ pub fn top_k_min<T: Ord + Default>(nums: Vec<T>, k: usize) -> Vec<T> {
         }
     }
 
+    // 由于是最大堆, 所以最终结果将是降序
     heap.collect()
 }
 ```
@@ -335,7 +343,7 @@ pub fn top_k_min<T: Ord + Default>(nums: Vec<T>, k: usize) -> Vec<T> {
 #[test]
 fn test_top_k_min() {
     let nums = vec![4, 1, 3, 12, 7, 5];
-    // 由于 next 函数的行为会导致结果是反转的
+    // 由于最大堆的行为会导致结果是反转的
     assert_eq!(top_k_min(nums.clone(), 3), vec![4, 3, 1]);
     assert_eq!(top_k_min(nums.clone(), 5), vec![7, 5, 4, 3, 1]);
     assert_eq!(top_k_min(nums.clone(), 0), vec![]);

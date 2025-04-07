@@ -28,7 +28,9 @@ cover: https://fontlos.com/cover/ferris.png
 
 此外我们也需要一些其他的基本操作, 例如查看但不弹出栈顶元素(Peek), 判断栈是否为空, 清空栈等
 
-## 基于动态数组的栈
+# 基于动态数组的栈
+
+## 基本数据结构
 
 首先我们会发现栈的这些行为都和数组很像, 因此在这一小节中, 我们先基于动态数组 `Vec` 实现一个基本的栈结构, 我们可以复用其多数方法, 并基于这个栈实现一个括号匹配的功能
 
@@ -40,7 +42,11 @@ struct Stack<T> {
 }
 ```
 
-基本结构一目了然, 不必多说, 然后我们实现一些基本功能
+这个结构一目了然, 基本只是对动态数组的二次封装, 只不过添加了一个额外字段用于储存栈当前大小, 直接是使用 `Vec` 的 `len` 方法在这个简单的示例中其实也可以
+
+## 实现基本功能
+
+多数功能可以直接复用 `Vec` 的
 
 ```rs
 impl<T> Stack<T> {
@@ -115,7 +121,44 @@ fn bracket_match(bracket: &str) -> bool {
 }
 ```
 
-那么栈的这种结构天然适合关于栈顶的操作, 可如果我们就是想对栈中间的内容进行读取或修改呢? 这里就是一些 Rust 特色的内容了, 我们可以为栈实现迭代器 Trait
+并且给出一系列测试
+
+```rs
+#[test]
+fn bracket_matching_1() {
+    let s = "(2+3){func}[abc]";
+    assert_eq!(bracket_match(s), true);
+}
+#[test]
+fn bracket_matching_2() {
+    let s = "(2+3)*(3-1";
+    assert_eq!(bracket_match(s), false);
+}
+#[test]
+fn bracket_matching_3() {
+    let s = "{{([])}}";
+    assert_eq!(bracket_match(s), true);
+}
+#[test]
+fn bracket_matching_4() {
+    let s = "{{(}[)]}";
+    assert_eq!(bracket_match(s), false);
+}
+#[test]
+fn bracket_matching_5() {
+    let s = "[[[]]]]]]]]]";
+    assert_eq!(bracket_match(s), false);
+}
+#[test]
+fn bracket_matching_6() {
+    let s = "";
+    assert_eq!(bracket_match(s), true);
+}
+```
+
+## 为栈实现迭代器
+
+栈的这种结构天然适合关于栈顶的操作, 可如果我们就是想对栈中间的内容进行读取或修改呢? 这里就是一些 Rust 特色的内容了, 我们可以为栈实现迭代器 Trait
 
 ```rs
 // 获取所有权并消耗栈
@@ -177,11 +220,11 @@ fn iter_mut(&mut self) -> IterMut<T> {
 
 其实本质上全算是将栈再次转化回数组了
 
-## 基于队列(Queue)的栈
+# 基于队列(Queue)的栈
 
 这里我们使用另一种方式来实现一个栈 -- **队列(Queue)**
 
-首先让我们介绍一下队列. 顾名思义, 队列就是一条队伍, 同样是线性连续的数据结构, 不过和栈相反, 它的原则是 **先进先出(FIFO, First In First Out)**, 它允许在一端(称为队尾)进行插入操作, 在另一端(称为队头)进行弹出操作.
+首先让我们介绍一下队列. 顾名思义, 队列就是一条队伍, 同样是线性连续的数据结构, 不过和栈相反, 它的原则是 **先进先出(FIFO, First In First Out)**, 它允许在一端 (队尾) 进行插入操作, 在另一端 (队头) 进行弹出操作.
 
 队列的应用包括
 
@@ -195,9 +238,9 @@ fn iter_mut(&mut self) -> IterMut<T> {
 - `enqueue`: 将元素加入队尾
 - `dequeue`: 从队头移除元素
 
-在这里, 我们同样使用动态数组作为队列的底层结构, 但注意, 由于底层结构的选择, 这里会导致队列弹出首元素的时间复杂度为 O(n), 因为需要弹出第一个元素
+在这里, 我们同样使用动态数组作为队列的底层结构, 但注意, 由于底层结构的选择, 这里会导致队列弹出首元素的时间复杂度为 `O(n)`, 因为需要弹出第一个元素
 
-先给出基本数据结构
+## 一个基于 Vec 的简易队列
 
 ```rs
 #[derive(Debug)]
@@ -218,7 +261,7 @@ impl<T> Queue<T> {
 
     pub fn dequeue(&mut self) -> Result<T, &str> {
         if !self.elements.is_empty() {
-            // 移除队头元素(注意这是O(n)操作)
+            // 移除队头元素 (注意这是 O(n) 操作)
             Ok(self.elements.remove(0usize))
         } else {
             Err("Queue is empty")
@@ -250,7 +293,11 @@ impl<T> Default for Queue<T> {
 }
 ```
 
-逻辑都比较简单, 然后给出使用双队列实现栈的方案, 其中一个是主队列, 一个是辅助队列, 具体谁是主队列取决于两个队列的内部情况
+逻辑都比较简单
+
+## 基于双队列的栈
+
+使用双队列实现栈的方案, 其中一个是主队列, 一个是辅助队列, 具体谁是主队列取决于两个队列的内部情况
 
 ```rs
 pub struct Stack<T> {
@@ -281,13 +328,13 @@ impl<T> Stack<T> {
         if self.is_empty() {
             return Err("Stack is empty");
         }
-        // 确定哪个队列是非空的(主队列)
+        // 确定哪个队列是非空的 (主队列)
         let (full, empty) = if !self.q1.is_empty() {
             (&mut self.q1, &mut self.q2)
         } else {
             (&mut self.q2, &mut self.q1)
         };
-        // 将主队列中的元素(除了最后一个)全部转移到空队列
+        // 将主队列中的元素 (除了最后一个) 全部转移到空队列
         // 可能你会觉得这很麻烦, 效率很低
         // 没错, 因为我们题目给出的队列的底层结构是动态数组
         // 弹出首个元素的时间复杂度是 O(n)
@@ -311,30 +358,55 @@ impl<T> Stack<T> {
 
 为了方便理解, 我们这里举一些例子
 
-```
-现有数据 1, 2, 3, 4, 5, 按顺序压入, 假设队列是一个管道, 左进右出
+现有数据 `1, 2, 3, 4, 5`, 按顺序压入, 假设队列是一个管道, **左进右出**
 
+```
 队列 A: 5, 4, 3, 2, 1
 队列 B:
-
-为了先进后出, 后进先出, 即弹出 5, 我们需要让 5 右侧的元素不要挡着, 首先把 A 队列的 1 弹出来, 然后顺势压入 B 队列
-
-队列 A: 5, 4, 3, 2
-队列 B: 1
-
-重复这一过程, 直到队列 A 只剩下一个元素
-
-队列 A: 5
-队列 B: 4, 3, 2, 1
-
-这时再弹出队列 A 的最后一个元素, 我们就完成了出栈操作, 此时 A 为空, B 为新的主队列, 可以看到元素的顺序保持不变
-
-而且对于一个好的队列实现, 压入和弹出的操作都是 O(1), 所以看起来麻烦, 实际上并不会有太大性能问题
-
-比如说用我们在后面会讲到的双链表作为队列, 再比如说, 标准库提供的 VecDeque
 ```
 
-## 基于栈的队列
+为了先进后出, 后进先出, 即弹出 `5`, 我们需要让 `5` 右侧的元素不要挡着, 首先把 `A` 队列的 `1` 弹出来, 然后顺势压入 `B` 队列
+
+```
+队列 A: 5, 4, 3, 2
+队列 B: 1
+```
+
+重复这一过程, 直到队列 `A` 只剩下一个元素
+
+```
+队列 A: 5
+队列 B: 4, 3, 2, 1
+```
+
+这时再弹出队列 `A` 的最后一个元素, 我们就完成了出栈操作, 此时 `A` 为空, `B` 为新的主队列, 可以看到剩余元素的顺序保持不变
+
+这看起来似乎很麻烦, 但对于一个良好的队列实现, 压入和弹出的操作平均都是 `O(1)`, 所以实际使用中并不会有太大性能问题, 比如说用我们在后面会讲到的双链表作为队列, 再比如说, 标准库提供的 `VecDeque`
+
+最后可以测试一下我们的栈
+
+```rs
+#[test]
+fn test_queue() {
+    let mut s = Stack::<i32>::new();
+    assert_eq!(s.pop(), Err("Stack is empty"));
+    s.push(1);
+    s.push(2);
+    s.push(3);
+    assert_eq!(s.pop(), Ok(3));
+    assert_eq!(s.pop(), Ok(2));
+    s.push(4);
+    s.push(5);
+    assert_eq!(s.is_empty(), false);
+    assert_eq!(s.pop(), Ok(5));
+    assert_eq!(s.pop(), Ok(4));
+    assert_eq!(s.pop(), Ok(1));
+    assert_eq!(s.pop(), Err("Stack is empty"));
+    assert_eq!(s.is_empty(), true);
+}
+```
+
+# 基于栈的队列
 
 没错, 这两个东西彼此双生, 用栈实现队列和用队列实现栈都是经典的算法, 下面我们就用栈给出一种高效的队列实现方案
 
@@ -355,12 +427,12 @@ impl<T> Queue<T> {
         }
     }
 
-    /// 入队操作 - O(1)时间复杂度
+    /// 入队操作 - O(1) 时间复杂度
     pub fn enqueue(&mut self, elem: T) {
         self.in_stack.push(elem);
     }
 
-    /// 出队操作 - 均摊O(1)时间复杂度
+    /// 出队操作 - 均摊 O(1) 时间复杂度
     pub fn dequeue(&mut self) -> Option<T> {
         // 如果out_stack为空，将in_stack的所有元素转移到out_stack
         if self.out_stack.is_empty() {
@@ -371,9 +443,9 @@ impl<T> Queue<T> {
         self.out_stack.pop()
     }
 
-    /// 查看队首元素 - 均摊O(1)时间复杂度
+    /// 查看队首元素 - 均摊 O(1) 时间复杂度
     pub fn peek(&mut self) -> Option<&T> {
-        // 同样需要先确保out_stack有元素
+        // 同样需要先确保 out_stack 有元素
         if self.out_stack.is_empty() {
             while let Some(elem) = self.in_stack.pop() {
                 self.out_stack.push(elem);
@@ -382,12 +454,12 @@ impl<T> Queue<T> {
         self.out_stack.last()
     }
 
-    /// 返回队列大小 - O(1)时间复杂度
+    /// 返回队列大小 - O(1) 时间复杂度
     pub fn size(&self) -> usize {
         self.in_stack.len() + self.out_stack.len()
     }
 
-    /// 检查队列是否为空 - O(1)时间复杂度
+    /// 检查队列是否为空 - O(1) 时间复杂度
     pub fn is_empty(&self) -> bool {
         self.in_stack.is_empty() && self.out_stack.is_empty()
     }
@@ -398,25 +470,60 @@ impl<T> Queue<T> {
 
 我们也给出一个示例
 
-```
-现有数据 1, 2, 3, 4, 5, 现在我们按照数组顺序入栈, 右边是栈顶
+现有数据 `1, 2, 3, 4, 5`, 现在我们按照数组顺序入栈, 右边是栈顶
 
+```
 s1: 1, 2, 3, 4, 5
 s2:
+```
 
 现在我们需要弹出元素, 记住队列是先进先出, 所以我们需要弹出栈底的元素, 那么就把第一个栈所有元素逐个弹出, 并压入第二个栈
 
+```
 s1:
 s2: 5, 4, 3, 2, 1
-
-可以看到 s2 的数据被倒过来了, 这时只需要弹出 s2 的栈顶元素, 我们就弹出了第一个元素
-
-那么此时怎么入队呢? 直接压入第一个栈就好了, 比如加入数据 6
-
-s1: 6
-s2: 5, 4, 3, 2
-
-那么我们要再出队一个数据呢? 我们知道第二个栈已经是倒序了, 所以我们直接再次从栈顶弹出一个元素, 它就是倒数第二个元素
 ```
 
-这样一来我们就实现了一个入队出队均摊下来都是 O(1) 的队列
+可以看到 `s2` 的数据被倒过来了, 这时只需要弹出 `s2` 的栈顶元素, 我们就弹出了第一个元素
+
+那么此时怎么入队呢? 直接压入第一个栈就好了, 比如加入数据 `6`
+
+```
+s1: 6
+s2: 5, 4, 3, 2
+```
+
+那么我们要再出队一个数据呢? 我们知道第二个栈已经是倒序了, 所以我们直接再次从栈顶弹出一个元素, 它就是倒数第二个元素
+
+这样一来我们就实现了一个入队出队均摊下来都是 `O(1)` 的队列, 在实际使用中, 我们可能需要设置一个阈值, 即使没有发生弹出操作, 只要栈中的元素达到了一定数量, 就提前转移到用于弹出元素的栈备用
+
+最后同样给一段简单的测试
+
+```rs
+#[test]
+fn test_stack_queue() {
+    let mut q = Queue::new();
+    assert_eq!(q.dequeue(), None);
+    assert!(q.is_empty());
+
+    q.enqueue(1);
+    q.enqueue(2);
+    q.enqueue(3);
+    assert_eq!(q.size(), 3);
+    assert_eq!(q.peek(), Some(&1));
+
+    assert_eq!(q.dequeue(), Some(1));
+    assert_eq!(q.dequeue(), Some(2));
+
+    q.enqueue(4);
+    q.enqueue(5);
+    assert_eq!(q.size(), 3);
+    assert_eq!(q.peek(), Some(&3));
+
+    assert_eq!(q.dequeue(), Some(3));
+    assert_eq!(q.dequeue(), Some(4));
+    assert_eq!(q.dequeue(), Some(5));
+    assert_eq!(q.dequeue(), None);
+    assert!(q.is_empty());
+}
+```
