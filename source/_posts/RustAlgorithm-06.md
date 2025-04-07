@@ -27,9 +27,9 @@ cover: https://fontlos.com/cover/ferris.png
 
 常用的用于表示图的结构包括
 
-- 邻接表(Adjacency List): 为每个顶点存储一个列表, 记录与之相连的顶点
-- 邻接矩阵(Adjacency Matrix): 使用二维数组表示顶点之间的连接关系
-- 边列表(Edge List)：简单地存储所有边的列表
+- **邻接表 (Adjacency List)**: 为每个顶点存储一个列表, 记录与之相连的顶点
+- **邻接矩阵 (Adjacency Matrix)**: 使用二维数组表示顶点之间的连接关系
+- **边列表 (Edge List)**: 简单地存储所有边的列表
 
 我们说图与搜索联系紧密, 为什么图需要搜索? 图的搜索算法用于系统地探索图中的节点和边, 主要解决以下问题
 
@@ -41,9 +41,9 @@ cover: https://fontlos.com/cover/ferris.png
 所有图搜索算法都遵循一个通用模式
 
 - 从起始节点开始
-- 逐步"发现"相邻节点
+- 逐步 "发现" 相邻节点
 - 记录已访问节点避免重复
-- 按照特定策略选择下一个要访问的节点, 例如下面我们会讲的深度优先和广度优先
+- 按照特定策略选择下一个要访问的节点, 例如下面我们会讲的广度优先搜索和深度优先搜索
 
 那么下面让我们简单实现一个图, 以及图的相关函数
 
@@ -57,7 +57,9 @@ pub struct UndirectedGraph {
 
 这是一种加权无向图, `HashMap` 的键是节点名称 (`String`), 值是该节点的邻接表, 存储了相邻节点和边的权重 (`Vec<(String, i32)>`)
 
-然后题目定义了一个图的通用 Trait
+## 实现基本功能
+
+我们的题目定义了一个图的通用 Trait
 
 ```rs
 pub trait Graph {
@@ -93,20 +95,7 @@ pub trait Graph {
 }
 ```
 
-注意, 题目中还给了一个用于错误处理的结构体
-
-```rs
-use std::fmt;
-#[derive(Debug, Clone)]
-pub struct NodeNotInGraph;
-impl fmt::Display for NodeNotInGraph {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "accessing a node that is not in the graph")
-    }
-}
-```
-
-然后我们的题目以及为无向图实现了这个 Trait
+然后我们的题目已经为无向图实现了这个 Trait
 
 ```rs
 impl Graph for UndirectedGraph {
@@ -124,9 +113,24 @@ impl Graph for UndirectedGraph {
 }
 ```
 
+此外, 题目中还给了一个用于错误处理的结构体
+
+```rs
+use std::fmt;
+#[derive(Debug, Clone)]
+pub struct NodeNotInGraph;
+impl fmt::Display for NodeNotInGraph {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "accessing a node that is not in the graph")
+    }
+}
+```
+
 我们现在的策略是节点不存在时自动创建节点, 至于错误处理的版本读者可以自行实现
 
-而且既然题目在 Trait 中留的不是函数签名, 而是带有花括号的, 那我们就在 Trait 中实现这个默认方法
+## 实现具体功能
+
+既然题目在 Trait 中留的不是函数签名, 而是带有花括号的, 那我这里就直接在 Trait 中实现这个默认方法, 实际代码中不建议这样操作
 
 ```rs
 fn add_node(&mut self, node: &str) -> bool {
@@ -168,7 +172,7 @@ fn add_edge(&mut self, edge: (&str, &str, i32)) {
 }
 ```
 
-只要理解了图的结构, 这并不难, 我们已经实现了一个基本的图, 不过它也只是个图, 还没有任何功能. 下面让我们学习一些搜索算法
+只要理解了图的结构, 这并不难, 我们已经实现了一个基本的图, 不过它也只是个图, 还没有任何功能. 下面让我们学习一些建立在图结构上的搜索算法
 
 # 广度优先搜索 (Breadth-First Search, BFS)
 
@@ -178,7 +182,7 @@ fn add_edge(&mut self, edge: (&str, &str, i32)) {
 
 BFS 在以下领域发挥重要作用
 
-- 最短路径查找: 在无权图中找到两点间的最短路径
+- 最短路径查找: 找到两点间的最短路径, 无权或有权
 - 连通性检查: 判断图中两点是否连通
 - 层级遍历: 按层次处理树或图结构
 - 网络爬虫: 按层级抓取网页
@@ -190,6 +194,8 @@ BFS通常使用 **队列(queue)** 来实现, 遵循以下步骤
 2. 从队列中取出一个节点 (真的就取出去不要了)
 3. 访问该节点的所有未访问邻接节点, 将它们放入队列并标记为已访问
 4. 重复步骤 2-3 直到队列为空 (即随后访问的一个节点没有未访问的邻居了)
+
+## 基本数据结构
 
 还是先从数据结构开始, 这里我们需要一个图结构, 先看定义
 
@@ -214,21 +220,21 @@ struct Graph {
 // |    |
 // 2    3
 adj: vec![
-    vec![1, 2],  // 节点0的邻居
-    vec![0, 3],  // 节点1的邻居
-    vec![0],     // 节点2的邻居
-    vec![1]      // 节点3的邻居
+    vec![1, 2],  // 节点 0 的邻居
+    vec![0, 3],  // 节点 1 的邻居
+    vec![0],     // 节点 2 的邻居
+    vec![1]      // 节点 3 的邻居
 ]
 ```
 
 同时操作这个图也很简单
 
-- 查询节点 `v` 的邻居: `adj[v]` O(1)
-- 判断 `u-v` 是否相连: `adj[u].contains(&v)` O(degree), 与邻居数量成正比
-- 添加边 `(u,v)`: `adj[u].push(v)` O(1)
-- 遍历所有边: 嵌套循环遍历 `adj`, O(V+E)
+- 查询节点 `v` 的邻居: `adj[v]` `O(1)`
+- 判断 `u-v` 是否相连: `adj[u].contains(&v)` `O(degree)`, 与邻居数量成正比
+- 添加边 `(u,v)`: `adj[u].push(v)` `O(1)`
+- 遍历所有边: 嵌套循环遍历 `adj`, `O(V+E)`
 
-这样我们就能为这个结构添加两个基本方法了
+## 基本方法
 
 ```rs
 fn new(n: usize) -> Self {
@@ -245,7 +251,11 @@ fn add_edge(&mut self, src: usize, dest: usize) {
 }
 ```
 
-接下来是需要我们实现的功能, 要求我们实现广度优先搜索并返回一个访问列表, 先看代码
+## 实现具体功能
+
+题目要求我们实现广度优先搜索并返回一个访问列表
+
+就像我们前面说的, 首先我们需要一个 `Vec` 来跟踪记录访问列表, 然后用另一个 `Vec` 记录这些节点的访问情况, 然后用一个队列来跟踪需要访问的节点, 将首个节点压入, 然后开始不断地弹出队列中的节点, 每次循环中都会把该节点未访问的节点压入队列, 同时把访问过的节点标记为已访问
 
 ```rs
 use std::collections::VecDeque;
@@ -286,7 +296,7 @@ fn bfs_with_return(&self, start: usize) -> Vec<usize> {
 }
 ```
 
-我们使用 `VecDeque` 作为队列, 因为它支持高效的 `头部删除(pop_front)` 和 `尾部插入(push_back)` 操作, 时间复杂度都是O(1)
+我们使用 `VecDeque` 作为队列, 因为它支持高效的 `头部删除(pop_front)` 和 `尾部插入(push_back)` 操作, 时间复杂度都是 `O(1)`
 
 - 首先初始化创建访问顺序数组, 访问标记数组和队列
 - 起始处理: 将起始节点标记为已访问并加入队列
@@ -301,6 +311,199 @@ fn bfs_with_return(&self, start: usize) -> Vec<usize> {
 首先就是最短路径查找, 对于无权图, BFS 天然的就能保证, 从某一入口进入后第一次访问的节点, 就是访问该节点的最短路径
 
 然后, 还能做一些连通性判断, 原理也很简单, 只要访问列表的长度和节点数量相同, 就代表所有的节点是彼此连通的
+
+# Dijkstra (迪科斯彻) 最短路径算法
+
+我们已经知道 BFS 可以自动的解决无权图的最短路径查找, 所以这里我们来实现一个用于有权图最短路径查找的经典算法 -- **Dijkstra 最短路径算法**
+
+它适用于边权值为非负的有向或无向图, 算法的主要思想是:
+
+- 维护一个到各顶点的当前最短距离集合, 初始时源点距离为0, 其他点距离为无穷大
+- 每次从未处理的顶点中选择距离最小的顶点
+- 对该顶点的所有邻居进行松弛操作 (即检查是否可以通过该顶点获得更短的路径)
+- 重复上述过程直到所有顶点都被处理
+
+总之我们会探索所有节点, 记录所有的最短路径
+
+实现时注意要点如下:
+
+- 使用优先队列 (最小堆) 代替普通队列, 以便每次取出距离最小的节点
+- 需要处理边的权重
+- 需要维护到每个节点的当前最短距离
+- 记录路径信息 (可选)
+
+## 基本数据结构
+
+因为我们需要处理权重, 所以节点不能是单纯的 `usize` 了
+
+```rs
+// 定义一个结构体来表示图中的边
+#[derive(Debug)]
+struct Edge {
+    node: usize,
+    weight: usize,
+}
+
+// 定义图结构，现在使用带权重的边
+struct WeightedGraph {
+    adj: Vec<Vec<Edge>>,
+}
+
+// 用于优先队列的比较结构体
+#[derive(Eq, PartialEq)]
+struct State {
+    distance: usize,
+    position: usize,
+}
+
+// 让State可以被比较，实现最小堆
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.distance.cmp(&self.distance)
+    }
+}
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+```
+
+然后为权重图实现基本方法
+
+```rs
+impl WeightedGraph {
+    // 创建一个新的带权图
+    fn new(n: usize) -> Self {
+        WeightedGraph {
+            adj: vec![vec![]; n],
+        }
+    }
+
+    // 添加带权边
+    fn add_edge(&mut self, src: usize, dest: usize, weight: usize) {
+        self.adj[src].push(Edge { node: dest, weight });
+        self.adj[dest].push(Edge { node: src, weight }); // 无向图需要双向添加
+    }
+}
+```
+
+最后实现两个关键方法
+
+```rs
+impl WeightedGraph {
+    // Dijkstra算法实现
+    fn dijkstra(&self, start: usize) -> (Vec<usize>, Vec<Option<usize>>) {
+        // 初始时所有节点对入口的距离都是无穷大
+        let mut distances = vec![MAX; self.adj.len()];
+        // 用于记录前驱节点, 重建路径
+        let mut previous = vec![None; self.adj.len()];
+
+        // 使用 BinaryHeap 实现最小堆, 每次取出距离最小的节点
+        let mut heap = BinaryHeap::new();
+
+        // 起始节点距离为 0, 直接推入
+        distances[start] = 0;
+        heap.push(State {
+            distance: 0,
+            position: start,
+        });
+
+        // 最小堆每一次 pop 都是当前距离最小的节点
+        while let Some(State { distance, position }) = heap.pop() {
+            // 检查当前位置的节点的距离是否已经比记录的距离大
+            // 如果是, 说明已经有更优路径, 跳过处理
+            if distance > distances[position] {
+                continue;
+            }
+
+            // 遍历当前节点的所有邻接边
+            for edge in &self.adj[position] {
+                // 计算通过当前节点到达邻居节点的距离
+                let next_distance = distance + edge.weight;
+
+                // 检查新计算的距离是否比之前记录的距离更小
+                if next_distance < distances[edge.node] {
+                    // 更新邻居节点的最短距离
+                    // 记录邻居节点的前驱节点为当前节点, 用当前节点作为下标输入就能得到最短路径上上一个节点的下标
+                    distances[edge.node] = next_distance;
+                    previous[edge.node] = Some(position);
+                    // 将邻居节点及其新距离加入优先队列
+                    heap.push(State {
+                        distance: next_distance,
+                        position: edge.node,
+                    });
+                }
+            }
+        }
+
+        (distances, previous)
+    }
+
+    // 辅助函数: 根据 previous 数组构建路径
+    fn build_path(&self, previous: &[Option<usize>], target: usize) -> Vec<usize> {
+        // 初始化路径向量
+        // 设置当前节点为目标节点
+        let mut path = Vec::new();
+        let mut current = target;
+
+        // 当前节点有前驱节点时继续
+        while let Some(prev) = previous[current] {
+            // 将当前节点加入路径
+            path.push(current);
+            // 将当前节点设置为它的前驱节点
+            current = prev;
+        }
+        path.push(current); // 添加起点
+        path.reverse();
+        path
+    }
+}
+```
+
+最后可以简单的测试一下
+
+```rs
+#[test]
+fn test_dijkstra() {
+    let mut graph = WeightedGraph::new(5);
+    graph.add_edge(0, 1, 4);
+    graph.add_edge(0, 2, 1);
+    graph.add_edge(1, 2, 2);
+    graph.add_edge(1, 3, 5);
+    graph.add_edge(2, 3, 1);
+    graph.add_edge(2, 4, 3);
+    graph.add_edge(3, 4, 1);
+
+    let (distances, previous) = graph.dijkstra(0);
+
+    // 检查距离
+    assert_eq!(distances[0], 0);
+    assert_eq!(distances[1], 3);
+    assert_eq!(distances[2], 1);
+    assert_eq!(distances[3], 2);
+    assert_eq!(distances[4], 3);
+
+    // 检查路径
+    assert_eq!(graph.build_path(&previous, 4), vec![0, 2, 3, 4]);
+    assert_eq!(graph.build_path(&previous, 1), vec![0, 2, 1]);
+}
+
+#[test]
+fn test_disconnected_graph() {
+    let mut graph = WeightedGraph::new(4);
+    graph.add_edge(0, 1, 1);
+    graph.add_edge(2, 3, 1);
+
+    let (distances, _) = graph.dijkstra(0);
+
+    assert_eq!(distances[0], 0);
+    assert_eq!(distances[1], 1);
+    assert_eq!(distances[2], MAX); // 不可达
+    assert_eq!(distances[3], MAX); // 不可达
+}
+```
 
 # 深度优先搜索 (Depth-First Search, DFS)
 
@@ -317,7 +520,7 @@ fn bfs_with_return(&self, start: usize) -> Vec<usize> {
 
 通常使用递归或显式栈来实现. 这里我们使用递归实现
 
-基本数据结构和方法与 BFS 相同, 以及这里多了个方法
+基本数据结构和方法与 BFS 相同, 以及这里多了个方法, 实际就是对我们需要实现的方法的上层包装
 
 ```rs
 // Perform a depth-first search on the graph, return the order of visited nodes
