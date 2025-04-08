@@ -312,6 +312,58 @@ fn bfs_with_return(&self, start: usize) -> Vec<usize> {
 
 然后, 还能做一些连通性判断, 原理也很简单, 只要访问列表的长度和节点数量相同, 就代表所有的节点是彼此连通的
 
+# 深度优先搜索 (Depth-First Search, DFS)
+
+深度优先搜索同样是一种用于遍历或搜索树或图的算法. 它沿着树的深度遍历树的节点, 尽可能深的搜索树的分支. 当节点 v 的所在边都已被探寻过, 搜索将回溯到发现节点 v 的那条边的起始节点. 这一过程一直进行到已发现从源节点可达的所有节点为止. 有点像玩游戏时收集全结局的样子
+
+正如上面所说, DFS 的核心思想是, 尽可能深地探索图的分支，直到无法继续前进才回溯. 这种策略使得 DFS 特别适合寻找图中的路径或检测环等问题
+
+除此之外 DFS 还在以下领域发挥作用
+
+- 遍历图的所有节点
+- 拓扑排序
+- 解决迷宫问题
+- 连通分量分析
+
+通常使用递归或显式栈来实现. 这里我们使用递归实现
+
+基本数据结构和方法与 BFS 相同, 以及这里多了个方法, 实际就是对我们需要实现的方法的上层包装
+
+```rs
+// Perform a depth-first search on the graph, return the order of visited nodes
+fn dfs(&self, start: usize) -> Vec<usize> {
+    let mut visited = HashSet::new();
+    let mut visit_order = Vec::new();
+    self.dfs_util(start, &mut visited, &mut visit_order);
+    visit_order
+}
+```
+
+这要求我们需要使用 `HashSet<usize>` 来记录已访问的节点, 集合能保证数据的唯一性, 并且它的查找和插入操作都是平均 O(1) 时间复杂度, 然后同样用 `Vec<usize>` 来存储访问顺序
+
+这个实现比较简单, 我们直接先给出代码
+
+```rs
+fn dfs_util(&self, v: usize, visited: &mut HashSet<usize>, visit_order: &mut Vec<usize>) {
+    // 标记当前节点为已访问
+    visited.insert(v);
+    // 将当前节点加入访问顺序
+    visit_order.push(v);
+    // 遍历当前节点的所有邻接节点
+    for &neighbor in &self.adj[v] {
+        // 如果邻居节点没有被访问, 那么不管其他邻居节点了, 我们立刻深入这个邻居节点继续递归调用
+        // 这里选择递归实现, 更直观体现DFS的自然回溯特性
+        // 但是如果图很深可能会调用栈溢出
+        // 这同样可以避免无限循环
+        if !visited.contains(&neighbor) {
+            self.dfs_util(neighbor, visited, visit_order);
+        }
+    }
+}
+```
+
+主要内容都体现在注释里了, 读者可以自行实现一个迭代的方案
+
 # Dijkstra (迪科斯彻) 最短路径算法
 
 我们已经知道 BFS 可以自动的解决无权图的最短路径查找, 所以这里我们来实现一个用于有权图最短路径查找的经典算法 -- **Dijkstra 最短路径算法**
@@ -505,54 +557,137 @@ fn test_disconnected_graph() {
 }
 ```
 
-# 深度优先搜索 (Depth-First Search, DFS)
+# DFS 寻路算法
 
-深度优先搜索同样是一种用于遍历或搜索树或图的算法. 它沿着树的深度遍历树的节点, 尽可能深的搜索树的分支. 当节点 v 的所在边都已被探寻过, 搜索将回溯到发现节点 v 的那条边的起始节点. 这一过程一直进行到已发现从源节点可达的所有节点为止. 有点像玩游戏时收集全结局的样子
+Dijkstra 同样可以用于寻路, 而且合约找到最短路径, 但是需要全图搜索比较慢, 接下来我们再使用 DFS 实现一个迷宫寻路算法, 不保证最短, 但能更快的找到通路
 
-正如上面所说, DFS 的核心思想是, 尽可能深地探索图的分支，直到无法继续前进才回溯. 这种策略使得 DFS 特别适合寻找图中的路径或检测环等问题
-
-除此之外 DFS 还在以下领域发挥作用
-
-- 遍历图的所有节点
-- 拓扑排序
-- 解决迷宫问题
-- 连通分量分析
-
-通常使用递归或显式栈来实现. 这里我们使用递归实现
-
-基本数据结构和方法与 BFS 相同, 以及这里多了个方法, 实际就是对我们需要实现的方法的上层包装
+## 基本数据结构
 
 ```rs
-// Perform a depth-first search on the graph, return the order of visited nodes
-fn dfs(&self, start: usize) -> Vec<usize> {
-    let mut visited = HashSet::new();
-    let mut visit_order = Vec::new();
-    self.dfs_util(start, &mut visited, &mut visit_order);
-    visit_order
+struct Maze {
+    grid: Vec<Vec<char>>,
+    rows: usize,
+    cols: usize,
 }
 ```
 
-这要求我们需要使用 `HashSet<usize>` 来记录已访问的节点, 集合能保证数据的唯一性, 并且它的查找和插入操作都是平均 O(1) 时间复杂度, 然后同样用 `Vec<usize>` 来存储访问顺序
+## 实现基本方法
 
-这个实现比较简单, 我们直接先给出代码
+要想构建一个迷宫, 直接使用邻接矩阵是最方便的
 
 ```rs
-fn dfs_util(&self, v: usize, visited: &mut HashSet<usize>, visit_order: &mut Vec<usize>) {
-    // 标记当前节点为已访问
-    visited.insert(v);
-    // 将当前节点加入访问顺序
-    visit_order.push(v);
-    // 遍历当前节点的所有邻接节点
-    for &neighbor in &self.adj[v] {
-        // 如果邻居节点没有被访问, 那么不管其他邻居节点了, 我们立刻深入这个邻居节点继续递归调用
-        // 这里选择递归实现, 更直观体现DFS的自然回溯特性
-        // 但是如果图很深可能会调用栈溢出
-        // 这同样可以避免无限循环
-        if !visited.contains(&neighbor) {
-            self.dfs_util(neighbor, visited, visit_order);
+impl Maze {
+    fn new(grid: Vec<Vec<char>>) -> Self {
+        let rows = grid.len();
+        let cols = if rows > 0 { grid[0].len() } else { 0 };
+        Maze { grid, rows, cols }
+    }
+
+    // 和之前一样, 这只是对 DFS 的上层包装
+    fn solve(&self, start: (usize, usize), end: (usize, usize)) -> Option<Vec<(usize, usize)>> {
+        let mut visited = HashSet::new();
+        let mut path = Vec::new();
+
+        if self.dfs(start, end, &mut visited, &mut path) {
+            Some(path)
+        } else {
+            None
         }
     }
 }
 ```
 
-主要内容都体现在注释里了, 读者可以自行实现一个迭代的方案
+## 实现关键方法
+
+```rs
+impl Maze {
+    // 这里我们同样递归的调用
+    fn dfs(
+        &self,
+        current: (usize, usize),
+        end: (usize, usize),
+        visited: &mut HashSet<(usize, usize)>,
+        path: &mut Vec<(usize, usize)>,
+    ) -> bool {
+        // 基本情况, 到达终点了
+        if current == end {
+            path.push(current);
+            return true;
+        }
+
+        // 这是针对我们下面的测试给出的判定条件, 用 # 代表墙壁, 如果访问过或者遇到墙壁, 这就不是通路
+        if visited.contains(&current) || self.grid[current.0][current.1] == '#' {
+            return false;
+        }
+
+        visited.insert(current);
+        path.push(current);
+
+        // 定义一些方向
+        let directions = [(-1, 0), (1, 0), (0, -1), (0, 1)];
+        for (dr, dc) in directions.iter() {
+            let r = current.0 as i32 + dr;
+            let c = current.1 as i32 + dc;
+
+            // 保证坐标仍然在迷宫内
+            if r >= 0 && r < self.rows as i32 && c >= 0 && c < self.cols as i32 {
+                let next = (r as usize, c as usize);
+                // 优先搜索邻居
+                if self.dfs(next, end, visited, path) {
+                    return true;
+                }
+            }
+        }
+
+        // 如果没有通路就返回上一格
+        path.pop();
+        false
+    }
+}
+```
+
+最后给出一个简单的测试
+
+```rs
+#[test]
+fn test_dfs_maze() {
+    let grid = vec![
+        vec!['S', '.', '.', '#', '.'],
+        vec!['#', '#', '.', '#', '.'],
+        vec!['.', '.', '.', '.', '.'],
+        vec!['.', '#', '#', '#', '.'],
+        vec!['.', '.', '.', '.', 'E'],
+    ];
+
+    let maze = Maze::new(grid);
+    if let Some(path) = maze.solve((0, 0), (4, 4)) {
+        println!("Find:");
+        for (i, (r, c)) in path.iter().enumerate() {
+            println!("Step {}: ({}, {})", i, r, c);
+        }
+    } else {
+        println!("Failed to find a path.");
+    }
+}
+```
+
+来看运行结果
+
+```
+Find:
+Step 0: (0, 0)
+Step 1: (0, 1)
+Step 2: (0, 2)
+Step 3: (1, 2)
+Step 4: (2, 2)
+Step 5: (2, 1)
+Step 6: (2, 0)
+Step 7: (3, 0)
+Step 8: (4, 0)
+Step 9: (4, 1)
+Step 10: (4, 2)
+Step 11: (4, 3)
+Step 12: (4, 4)
+```
+
+可以看到这并不是最短路径
