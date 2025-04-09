@@ -10,7 +10,7 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-# 堆
+# 二叉堆
 
 堆是一种特殊的完全二叉树数据结构, 在这一节中, 我们将实现一种底层的二叉堆, 学习什么是堆化, 并可以自由选择是最大堆还是最小堆模式, 在后续的排序算法课程中也将基于此实现一个简单的堆排序
 
@@ -307,7 +307,7 @@ where
 }
 ```
 
-## Top-K 算法
+# Top-K 算法
 
 最后让我们使用我们的堆结构实现一个 Top-K-Min 函数, 找出一组数值之中最小的 K 个值
 
@@ -355,5 +355,275 @@ fn test_edge_cases() {
     assert_eq!(top_k_min(vec![2, 2, 2], 2), vec![2, 2]);
     // K 大于数组长度
     assert_eq!(top_k_min(vec![1, 2], 5), vec![2, 1]);
+}
+```
+
+# Huffman
+
+**Huffman 编码** 是一种基于字符出现频率构建最优前缀码的无损数据压缩算法, 由 David A. Huffman 在 1952 年提出. 核心思想很简单: 出现频率高的字符使用较短的编码, 出现频率低的字符使用较长的编码, 从而使整体编码长度最小化.
+
+使用二叉堆 (特别是最小堆) 可以高效地构建 Huffman 树. 因为这里对树的知识比较少, 并且复用了我们的堆, 所以就不把它放在后面的树结构章节中了
+
+关键特性:
+
+- 前缀码性质: 没有任何编码是另一个编码的前缀, 保证解码无歧义
+- 最优性: 在所有字符编码方案中, Huffman 编码的平均编码长度最短
+- 贪心算法: 通过局部最优选择 (总是合并频率最低的两个节点) 达到全局最优
+
+核心概念:
+
+- 频率统计 (`O(n)`): 统计文本中每个字符的出现次数
+- 优先队列 (`O(n)`): 使用最小堆快速获取频率最低的两个节点
+- 二叉树构建 (`O(n log n)`): 自底向上构建二叉树, 频率越低的节点在树中越深
+- 编码生成 (`O(n)`): 左路径标记为 `0`, 右路径标记为 `1`
+
+应用场景非常多, 比如常见的 ZIP 压缩算法的基础, 图像压缩, 网络传输优化等
+
+基本步骤如下
+
+1. 统计字符频率
+2. 为每个字符创建叶子节点, 并按频率构建最小堆
+3. 循环从堆中取出两个最小频率的节点, 合并为一个新节点, 放回堆中
+4. 重复步骤 3 直到堆中只剩一个节点, 形成 Huffman 树
+5. 根据 Huffman 树生成编码表
+
+## 文字图示
+
+下面我们简单的用文字描述一下整个过程, 例如对于 `abracadabra`
+
+首先统计频率: `a:5, b:2, r:2, c:1, d:1`
+
+然后构建最小堆: `[c:1, d:1, b:2, r:2, a:5]`
+
+
+然后开始合并节点
+
+- 合并 `c` 和 `d` → 新节点 `2` (中间节点没有名字): `[(c+d):2, b:2, r:2, a:5]`
+- 合并两个 `2` → 新节点 `4`: `[(b+(c+d)):4, r:2, a:5]`
+- 合并 `r` 和 `a` → 新节点 `7`: `[(r+(b+(c+d))):6, a:5]`
+- 合并 `4`和 `7` → 根节点 `11`
+
+我们来看一下树结构
+
+```
+          11
+        /   \
+       6     a
+     /  \
+    4    r
+   / \
+  2   b
+ / \
+c  d
+```
+
+然后按照前序遍历 (根, 左, 右) 遍历这棵树, 赋予编码
+
+```
+a -> 1
+r -> 01
+b -> 001
+c -> 0000
+d -> 0001
+```
+
+然后完成压缩
+
+## 基本数据结构
+
+基于现有堆结构, 首先我们需要定义 Huffman 树的节点结构
+
+```rs
+#[derive(Debug, Default)]
+pub struct HuffmanNode {
+    pub character: Option<char>,  // None表示内部节点
+    pub frequency: usize, //节点频率 (叶子节点为字符频率, 内部节点为子节点频率和)
+    pub left: Option<Box<HuffmanNode>>,
+    pub right: Option<Box<HuffmanNode>>,
+}
+
+// 实现一些基本的比较特性
+// 这是将节点放入最小堆的必要条件
+
+impl PartialOrd for HuffmanNode {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.frequency.cmp(&other.frequency))
+    }
+}
+
+impl Ord for HuffmanNode {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.frequency.cmp(&other.frequency)
+    }
+}
+
+impl PartialEq for HuffmanNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.frequency == other.frequency
+    }
+}
+
+impl Eq for HuffmanNode {}
+```
+
+## 实现关键功能
+
+首先是构建 Huffman 树, 先看代码
+
+```rs
+use std::collections::HashMap;
+
+// 构建树
+pub fn build_huffman_tree(text: &str) -> Option<Box<HuffmanNode>> {
+    if text.is_empty() {
+        return None;
+    }
+
+    // 统计字符频率
+    let mut freq_map = HashMap::new();
+    for c in text.chars() {
+        *freq_map.entry(c).or_insert(0) += 1;
+    }
+
+    // 创建最小堆并插入所有字符节点
+    let mut heap = MinHeap::new();
+    for (character, frequency) in freq_map {
+        heap.add(Box::new(HuffmanNode {
+            character: Some(character),
+            frequency,
+            left: None,
+            right: None,
+        }));
+    }
+
+    // 构建 Huffman 树
+    while heap.len() > 1 {
+        // 取出频率最小和次小的节点
+        let left = heap.next().unwrap();
+        let right = heap.next().unwrap();
+
+        let merged = Box::new(HuffmanNode {
+            character: None,
+            frequency: left.frequency + right.frequency,
+            left: Some(left),
+            right: Some(right),
+        });
+
+        // 将合并后的节点放回堆中
+        heap.add(merged);
+    }
+
+    heap.next()  // 返回最终的 Huffman 树根节点
+}
+```
+
+然后就是由树结构生成编码表
+
+```rs
+// 由树构建编码
+pub fn build_huffman_codebook(root: &Box<HuffmanNode>) -> HashMap<char, String> {
+    let mut codebook = HashMap::new();
+    // 使用显式栈模拟递归
+    let mut stack = Vec::new();
+
+    // 处理单字符特殊情况
+    if let Some(ref c) = root.character {
+        codebook.insert(*c, "0".to_string());
+        return codebook;
+    }
+
+    // 初始状态, 根节点, 空路径
+    stack.push((root, String::new()));
+
+    // 深度优先遍历
+    // 取出当前栈顶和编码
+    while let Some((node, code)) = stack.pop() {
+        // 如果是含字符的叶子节点
+        if let Some(ref c) = node.character {
+            // 字符存入哈希表, 记录编码, 跳过后续分支处理
+            codebook.insert(*c, code);
+            continue;
+        }
+
+        // 左子树添加 "0", 右子树添加 "1"
+        // 每次遍历半棵树时都会再次推入两个新的子节点, 所以是深度优先
+        if let Some(ref left) = node.left {
+            stack.push((left, code.clone() + "0"));
+        }
+
+        if let Some(ref right) = node.right {
+            stack.push((right, code + "1"));
+        }
+    }
+
+    codebook
+}
+```
+
+
+
+最后编码文本, 使用 `codebook` 逐字符替换即可
+
+```rs
+pub fn huffman_encode(text: &str) -> (Option<Box<HuffmanNode>>, String) {
+    let tree = build_huffman_tree(text);
+    if tree.is_none() {
+        return (None, String::new());
+    }
+
+    let codebook = build_huffman_codebook(&tree.as_ref().unwrap());
+    let mut encoded = String::new();
+
+    for c in text.chars() {
+        encoded.push_str(&codebook[&c]);
+    }
+
+    (tree, encoded)
+}
+```
+
+然后给出一些简单的测试
+
+```rs
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_huffman_single_char() {
+        let text = "aaaaa";
+        let (tree, encoded) = huffman_encode(text);
+        assert!(tree.is_some());
+        assert_eq!(encoded, "00000");
+    }
+
+    #[test]
+    fn test_huffman_encoding() {
+        let text = "this is an example of a huffman tree";
+        let (tree, encoded) = huffman_encode(text);
+        assert!(tree.is_some());
+
+        // 验证编码长度比原始文本短
+        let original_bits = text.len() * 8;
+        let encoded_bits = encoded.len();
+        assert!(encoded_bits < original_bits);
+
+        // 验证不同字符有不同的前缀编码
+        let codebook = build_huffman_codebook(&tree.unwrap());
+        let codes: Vec<&String> = codebook.values().collect();
+        for i in 0..codes.len() {
+            for j in i+1..codes.len() {
+                assert!(!codes[i].starts_with(codes[j]));
+                assert!(!codes[j].starts_with(codes[i]));
+            }
+        }
+    }
+
+    #[test]
+    fn test_empty_input() {
+        let (tree, encoded) = huffman_encode("");
+        assert!(tree.is_none());
+        assert!(encoded.is_empty());
+    }
 }
 ```
