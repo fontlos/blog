@@ -1,8 +1,8 @@
 ---
 feature: false
-title: 初识 Rust(2) | 你好, 世界!
-date: 2021-04-05 12:36:07
-abstracts: Rust 与 Cargo 的基本操作, 注释与文档
+title: 初识 Rust(8) | 基建设施
+date: 2025-09-12 17:00:00
+abstracts: Cargo, WorkSpace, Rustfmt, Clippy, crate.io 以及 CI
 tags:
     - Rust
 categories:
@@ -10,63 +10,72 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-# Hello Rust
+> 关于 Cargo 和 WorkSpace 的内容在 [第二节](https://fontlos.com/post/RustCourse-02) 已经大致说过了, 这里再重新梳理一下
 
-## Hello World
-
-学习一门语言的传统都是打印 **Hello World**, 下面让我们用 Rust 的方式向世界问好
-
-## 创建一个 Rust 文件
-
-打开 **VSCode**, 新建一个文件夹用于存放我们的代码, 在里面新建一个 `main.rs` 文件 (Rust的习惯后缀名为 `.rs` 虽然在只用 Rustc 编译时别的后缀名也能通过)
-
-关于文件命名, Rust采用 **蛇形命名法**, 如果名字有多个单词, **无需** 有大写字母, 而是采用 `_` 来分隔每一个单词, 如 `hello_world.rs`, 尽量避免使用 **ASCII** 字符以外的字符, 不要以数字开头
-
-## 编写并运行第一个 Rust 程序
-
-```rust
-// main.rs
-fn main() {
-    println!("Hello World!");
-}
-```
-
-在 main.rs 文件上单击右键, 选择 **在终端中打开**, 然后执行以下命令
-
-```sh
-rustc main.rs && main
-```
-
-终端上会输出
-
-```
-Hello World!
-```
-
-## 分析这个程序
-
-好了, 我们已经创建了第一个 Rust 程序了, 但这段代码到底是什么意思呢? 现在让我们来分析一下:
-
-1. `fn` 表示定义一个 **函数**, `main` 是这个函数的名字, 花括号 `{}` 里的语句则是这个函数的内容, Rust 要求所有函数体都要用花括号包裹起来. 一般来说, 将左花括号与函数声明置于同一行并以空格分隔, 是良好的代码风格
-2. 名字为 **main** 的函数在 Rust 里有特殊的作用, 即程序的入口, 程序就是从这里开始执行的
-3. `println!()`是一个宏, 它的功能是打印圆括号`()`中的内容并换行, `!` 是宏的标志, 如果是调用函数, 则没有 `!`
-4. 在 Rust 中, 语句的末尾一般用分号 `;` 作为结束标志
-5. Rust 程序的编译与运行是彼此独立的, 在运行 Rust 程序之前, 必须先使用 Rust 编译器编译它, 即输入 rustc 命令并传入源文件名称
-6. Rust 是一种 **预编译静态类型** 语言, 这意味着你可以编译程序, 并将可执行文件送给其他人, 他们甚至不需要安装 Rust 就可以运行. 这与解释性语言不同
-
-# Hello Cargo
+# Cargo
 
 仅仅使用 Rustc 编译简单程序是没问题的, 不过随着项目的增长, Rustc 就会难以满足需要, 这种时候就需要包管理工具了
 
 ## Cargo 简介
 
-代码管理对于编程来说一直是一个重要的问题, 各种不同的语言也都会采用不同的代码管理器, Rust 作为一枚现代语言, 综合了现有语言管理工具的优点, 为我们提供了一个大杀器 --- **Cargo**
+代码管理对于编程来说一直是一个重要的问题, 各种不同的语言也都会采用不同的代码管理器, Rust 作为一枚现代语言, 综合了现有语言管理工具的优点, 为我们提供了一个大杀器 --- **Cargo**. Cargo 的强大有目共睹, 包括许多现代新兴的包管理器都或多或少的借鉴了 Cargo, 例如 Python 的 **Uv**
 
-作为 Rust 的代码组织管理工具, Cargo 提供了一系列的工具. 从项目的建立, 构建到测试, 运行直至部署, 为 Rust 项目的管理提供尽可能完整的手段. 同时与 Rust 语言及其编译器 Rustc 本身的各种特性紧密结合
+作为 Rust 的代码组织管理工具, Cargo 提供了一系列的工具. 从项目的建立, 构建到测试, 运行直至部署, 为 Rust 项目的管理提供尽可能完整的手段, 极大的减轻了开发复杂度. 同时与 Rust 语言及其编译器 Rustc 本身的各种特性紧密结合
 
-## Cargo 入门
+## Cargo 简单使用
 
-在我们安装 Rust 的时候就已经安装好了 Cargo
+在我们安装 Rust 的时候就已经安装好了 Cargo, 直接在命令行运行一下看看
+
+```sh
+Rust's package manager
+
+Usage: cargo [+toolchain] [OPTIONS] [COMMAND]
+       cargo [+toolchain] [OPTIONS] -Zscript <MANIFEST_RS> [ARGS]...
+
+Options:
+  -V, --version                  Print version info and exit
+      --list                     List installed commands
+      --explain <CODE>           Provide a detailed explanation of a rustc error message
+  -v, --verbose...               Use verbose output (-vv very verbose/build.rs output)
+  -q, --quiet                    Do not print cargo log messages
+      --color <WHEN>             Coloring [possible values: auto, always, never]
+  -C <DIRECTORY>                 Change to DIRECTORY before doing anything (nightly-only)
+      --locked                   Assert that `Cargo.lock` will remain unchanged
+      --offline                  Run without accessing the network
+      --frozen                   Equivalent to specifying both --locked and --offline
+      --config <KEY=VALUE|PATH>  Override a configuration value
+  -Z <FLAG>                      Unstable (nightly-only) flags to Cargo, see 'cargo -Z help' for details
+  -h, --help                     Print help
+
+Commands:
+    build, b    Compile the current package
+    check, c    Analyze the current package and report errors, but don't build object files
+    clean       Remove the target directory
+    doc, d      Build this package's and its dependencies' documentation
+    new         Create a new cargo package
+    init        Create a new cargo package in an existing directory
+    add         Add dependencies to a manifest file
+    remove      Remove dependencies from a manifest file
+    run, r      Run a binary or example of the local package
+    test, t     Run the tests
+    bench       Run the benchmarks
+    update      Update dependencies listed in Cargo.lock
+    search      Search registry for crates
+    publish     Package and upload this package to the registry
+    install     Install a Rust binary
+    uninstall   Uninstall a Rust binary
+    ...         See all commands with --list
+
+See 'cargo help <command>' for more information on a specific command.
+```
+
+可以看到有许多的命令, 后面跟着注释写明其功能. 你还可以使用 `cargo [COMMAND] --help` 进一步查看子命令的帮助信息
+
+其中一些比较常用的, 例如 `build` 和 `run` 等还定义了单字母别名以方便使用
+
+还有一些例如 `add`, `remove` 等命令, 原来有社区的 `cargo-edit` 提供, 后来被整合到了官方内部
+
+下面我们简单的使用一下
 
 ### 创建项目
 
@@ -116,7 +125,113 @@ cargo build --release # Release 模式 --release 代表优化编译
 ./target/release/hello_cargo.exe
 ```
 
-# Crate 与 Package
+## Cargo 配置
+
+在 Cargo 的安装目录下, 你可以创建一个名为 `config.toml` 的文件用于全局配置 Cargo
+
+例如, 在我们安装完 Rust 后, 通常要配置镜像源以方便我们拉取 Crate 依赖, 以 `rsproxy.cn` 为例, 其官网会建议我们在这个文件内写入以下内容
+
+```toml
+# 选择镜像源
+[source.crates-io]
+replace-with = 'rsproxy-sparse'
+
+# 定义镜像源
+[source.rsproxy]
+registry = "https://rsproxy.cn/crates.io-index"
+# 用稀疏搜索加快索引
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/index/"
+
+# 切换索引源
+[registries.rsproxy]
+index = "https://rsproxy.cn/crates.io-index"
+
+# 使用系统上安装的 Git 工具
+[net]
+git-fetch-with-cli = true
+```
+
+还有一个可能用到的配置是
+
+```toml
+[http]
+check-revoke = false
+```
+
+这将禁用 **证书吊销检查**, 可以解决某些网络环境下出现的SSL证书验证问题
+
+如果你安装了 [**Sscache**](https://github.com/mozilla/sccache), 一个由 Mozilla 开发的编译缓存管理器, 并配置好了相关环境变量, 你就可以使用以下配置为 Rust 添加一个全局的编译缓存, 这可以显著降低从头编译程序的时间, 相当于一个共享的 `target` 目录
+
+```toml
+[build]
+rustc-wrapper = "sccache"
+```
+
+在列出 Cargo 命令时我们发现一些常见命令是拥有自己的别名的, 你同样可以定义自己的命令别名, 不过这些别名不能混合使用, 例如可以定义一个用于快速进行 `Release` 编译的命令别名
+
+```toml
+[alias]
+br = "build --release"
+rr = "run --release"
+```
+
+你还可以通过在项目根目录创建 `.cargo/config.toml` 文件来进行针对当前项目的配置, 例如对于 `rCore` 项目可能会需要以下的配置用于指定编译目标和 `rustflag`, 免去了每次都手动传入这些信息的麻烦
+
+```toml
+[build]
+target = "riscv64gc-unknown-none-elf"
+
+[target.riscv64gc-unknown-none-elf]
+rustflags = [
+    "-Clink-arg=-Tsrc/linker.ld", "-Cforce-frame-pointers=yes"
+]
+```
+
+## Rust 工具链
+
+默认情况下, 我们安装的 Rust 工具链是 **Stable** 版本, Rust 总共有三个主要版本: **Stable**, **Beta**, **Nightly**. 特性依次增多, 稳定性依次降低
+
+你可以在安装时就选择其他版本的工具链, 也可以在安装后手动安装其他版本的工具链, 这需要使用 **Rustup** 工具, 例如
+
+```sh
+rustup toolchain install nightly
+```
+
+这将自动安装适合你当前系统的 Nightly 版 Rust 工具链, 如果有必要你还可以指定版本, 比如 `nightly-2024-02-25`
+
+你还可以通过以下命令切换全局默认工具链
+
+```sh
+rustup toolchain default nightly
+```
+
+如果不想切换全局工具链只需要临时使用, 可以在你的项目根目录添加 `rust-toolchain.toml` 文件并写入以下内容
+
+```toml
+[toolchain]
+channel = "nightly"
+```
+
+对于每个工具链, 你还可以安装其他的编译目标. 首先切换到对应的工具链, 使用以下命令就可以列出工具链列表
+
+```sh
+>rustup target list
+aarch64-apple-darwin
+aarch64-apple-ios
+aarch64-apple-ios-macabi
+aarch64-apple-ios-sim
+aarch64-linux-android (installed)
+...
+```
+
+你可以通过 `rustup target add` 来安装对应的编译目标, 例如对于 rCore 项目, 你可能需要以下目标
+
+```sh
+rustup target add riscv64gc-unknown-none-elf
+```
+
+# Crate, Package 与 WorkSpace
 
 我们说过 Cargo 是一个强大的包管理工具, 让我们先来介绍以下几个概念:
 
@@ -152,7 +267,7 @@ name = "hello_cargo"
 description = ""
 version = "0.1.0"
 authors = ["YourName <Your email>"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 crate1 = "0.3"
@@ -169,6 +284,7 @@ crate5 = { version = "0.5.0"}
 crate6 = { git = "https://github.com/user/repo" }
 crate7 = { path = "path/to/crate" }
 ```
+
 **TOML** 是 Rust 的官方配置文件格式, 由像 `[package]` 或 `[dependencies]` 这样的段落组成, 每一个段落又由多个字段组成, 这些段落和字段就描述了项目组织的基本信息
 
 - `package` 段落
@@ -189,8 +305,38 @@ crate7 = { path = "path/to/crate" }
 members = [
     "path/to/package1",
     "path/to/package2",
+    "lib/*",
     "..."
 ]
+exclude = [
+    "lib/package3"
+]
+```
+
+你可以在 WorkSpace 定义一些 Package 信息, 例如
+
+```toml
+[package]
+version = "0.1.0"
+```
+
+然后你就可以在 WorkSpace 管理的 Package 下面的 `Cargo.toml` 使用它, 例如
+
+```toml
+[package]
+version = { workspace = true }
+```
+
+这同样适用于统一管理依赖
+
+```toml
+# ./Cargo.toml
+[workspace.dependencies]
+crate = "1.0"
+
+# ./lib/Cargo.toml
+[dependencies]
+crate = { workspace = true }
 ```
 
 看起来非常简单, WorkSpace 下所有 Package 共用同一个 `target` 文件夹, 总体来看可以占用更少的磁盘空间, 加快编译速度
@@ -198,6 +344,8 @@ members = [
 ## Cargo.lock
 
 该文件不需要直接修改, 是 Cargo 工具根据 `Cargo.toml` 生成的项目依赖详细清单文件, 如果不手动修改 `Cargo.toml` 或执行 `cargo update` 会锁定依赖项的版本, 即使包含通配符等
+
+但是如果有时你在更新 Crate 版本后遇到了奇怪的编译问题, 可以尝试删除这个文件让 Cargo 重新生成
 
 ## 定义集成测试用例
 
@@ -254,51 +402,6 @@ path = "bin/bin1.rs"
 - `cargo fmt`: 代码格式化工具
 - `cargo check`: 代码检查工具, 不执行真正的 Build, 所以会快一点
 
-从这开始, 请把 Cargo 当作习惯, 对于简单项目, Cargo 并不比 Rustc 提供了更多的优势, 不过随着开发的深入, 终将证明其价值
+# Rustfmt 与 Clippy
 
-# 注释与文档
-
-最后, 让我们学习一下 Rust 的注释
-
-Rust 中有三种注释, 前两种分别为:
-
-1. 行注释 `//...`
-2. C 语言风格的块注释 `/*...*/`
-
-```rust
-// 创建一个绑定
-let x = 5;
-let y = 6; // 创建另一个绑定
-
-/*这是一段块注释*/ let a = 1; /*块注释不影响块以外的代码*/
-
-/*
-块注释可以有很多行
-*/
-```
-
-Rust的第三种注释是 **文档注释**, 文档注释又分为两小种, 支持 **Markdown** 语法:
-
-1. `//!` 模块注释, 用来描述包含它的项, 一般用在模块文件的头部
-2. `///` 用来描述的它后面接着的项
-
-```rust
-//! 这是一个模块
-
-/// # Add One
-/// ## Example
-/// ```rust
-/// let one = 1;
-/// assert_eq!(2, add_one(one));
-/// ```
-fn add_one(x: i32) -> i32 {
-    x + 1
-}
-```
-
-## 生成文档文件
-
-Rust 工具链可以很轻易地从文档注释中生成漂亮的 **HTML** 文档:
-
-1. `rustdoc *.rs`: 用于单个文件
-2. `cargo doc`: 用于整个项目, 最好加上 `--no-depth` 参数, 否则将给你所有的依赖项也生成文档
+# crate.io 与 CI
