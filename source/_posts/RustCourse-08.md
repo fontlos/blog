@@ -75,11 +75,7 @@ See 'cargo help <command>' for more information on a specific command.
 
 还有一些例如 `add`, `remove` 等命令, 原来由社区的 `cargo-edit` 提供, 后来被整合到了官方内部
 
-下面我们简单的使用一下
-
-### 创建项目
-
-新建一个文件夹并在终端中打开, 输入以下命令
+下面我们简单的使用一下, 终端中打开一个文件夹, 输入以下命令
 
 ```sh
 cargo new hello_cargo --bin
@@ -87,9 +83,7 @@ cargo new hello_cargo --bin
 
 `--bin` 是一个参数, 代表这是一个 **Bin** crate, 最终将会被编译为二进制可执行文件, Cargo 默认创建 Bin crate, 所以该参数可以不加
 
-### 查看目录结构
-
-`hello_cargo` 文件夹下有一个 `src` 和一个 `Cargo.toml` 文件, src 文件夹下有一个 `main.rs` 文件, 它也在 hello_cargo 目录初始化了一个 `.git` 仓库, 以及一个 `.gitignore` 文件, 在 VSCode 中我们可以很轻易地使用 Git
+查看目录结构. `hello_cargo` 文件夹下有一个 `src` 和一个 `Cargo.toml` 文件, src 文件夹下有一个 `main.rs` 文件, 它也在 hello_cargo 目录初始化了一个 `.git` 仓库, 以及一个 `.gitignore` 文件, 在 VSCode 中我们可以很轻易地使用 Git
 
 ```
 hello_cargo
@@ -97,8 +91,6 @@ hello_cargo
 └── src
     └── main.rs
 ```
-
-### 编辑 main.rs 并运行
 
 Cargo 初始化的 main.rs 里会有一些默认内容, 我们把它改为
 
@@ -268,9 +260,9 @@ rustup target add riscv64gc-unknown-none-elf
 - 基准测试源代码文件位于 `benches`
 - `target`: 由 Cargo 自动生成, 包含下载的依赖项和编译缓存等
 
-## Cargo.toml
+## Cargo.toml 与 Cargo.lock
 
-Cargo 的项目数据描述文件, 存储了项目的所有信息
+`Cargo.toml` 是项目的数据描述文件, 存储了项目的所有信息
 
 ```toml
 [package]
@@ -309,7 +301,11 @@ crate7 = { path = "path/to/crate" }
     - 基于项目源代码的 Git 仓库地址, 通过 URL 来描述
     - 基于本地项目的绝对路径或者相对路径
 
-### 条件编译 -- Feature
+`Cargo.lock` 文件不需要直接修改, 是 Cargo 工具根据 `Cargo.toml` 生成的项目依赖详细清单文件, 如果不手动修改 `Cargo.toml` 或执行 `cargo update` 会锁定依赖项的版本, 即使包含通配符等
+
+但是如果有时你在更新 Crate 版本后遇到了奇怪的编译问题, 可以尝试删除这个文件让 Cargo 重新生成
+
+## 条件编译 -- Feature
 
 你可以通过以下方式声明一个 Feature
 
@@ -319,9 +315,7 @@ feature1 = []
 feature2 = ["feature1"] # 这表示启用 feature2 的同时会启用 feature1
 ```
 
-然后你就可以使用 `cfg` 标志来让某些代码是可选的
-
-例如
+然后你就可以使用 `cfg` 标志来让某些代码是可选的, 例如
 
 ```rust
 #[cfg(feature = "feature1")]
@@ -362,10 +356,10 @@ feature1 = ["crate1"]
 ```toml
 [dependencies]
 crate1 = { version = "1.0", features = ["feature1"] }
-crate1 = { version = "1.0", , default-features = false, features = ["feature2"] } # 这将禁用默认 Feature 并单独开启指定 Feature
+crate2 = { version = "1.0", , default-features = false, features = ["feature2"] } # 这将禁用默认 Feature 并单独开启指定 Feature
 ```
 
-### 编译配置 -- Profile
+## 编译配置 -- Profile
 
 不同的编译配置可配置编译器的行为, 主要在优化方面, 默认情况下, Rust 有四种编译配置 `dev`, `release`, `test` (继承自 `dev`), `bench` (继承自 `release`)
 
@@ -430,9 +424,9 @@ rpath = false
 - `codegen-units`: 指定一个包会被分割为多少个代码生成单元. 分割较多, 可增加并行编译速度, 但会一定程度降低性能
   - 对于增量编译默认值是 256, 非增量编译是 16
 
-### WorkSpace
+## 工作空间 -- WorkSpace
 
-而对于 WorkSpace, 它可以组织多个 Package, `Cargo.toml` 的内容可能是这样的
+WorkSpace 可以组织多个 Package, `Cargo.toml` 的内容类型如下
 
 ```toml
 [workspace]
@@ -474,12 +468,6 @@ crate = { workspace = true }
 ```
 
 看起来非常简单, WorkSpace 下所有 Package 共用同一个 `target` 文件夹, 总体来看可以占用更少的磁盘空间, 加快编译速度
-
-## Cargo.lock
-
-该文件不需要直接修改, 是 Cargo 工具根据 `Cargo.toml` 生成的项目依赖详细清单文件, 如果不手动修改 `Cargo.toml` 或执行 `cargo update` 会锁定依赖项的版本, 即使包含通配符等
-
-但是如果有时你在更新 Crate 版本后遇到了奇怪的编译问题, 可以尝试删除这个文件让 Cargo 重新生成
 
 ## 定义集成测试用例
 
