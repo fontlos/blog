@@ -309,6 +309,129 @@ crate7 = { path = "path/to/crate" }
     - 基于项目源代码的 Git 仓库地址, 通过 URL 来描述
     - 基于本地项目的绝对路径或者相对路径
 
+### 条件编译 -- Feature
+
+你可以通过以下方式声明一个 Feature
+
+```toml
+[features]
+feature1 = []
+feature2 = ["feature1"] # 这表示启用 feature2 的同时会启用 feature1
+```
+
+然后你就可以使用 `cfg` 标志来让某些代码是可选的
+
+例如
+
+```rust
+#[cfg(feature = "feature1")]
+println!("Feature 1!");
+```
+
+不只是 Feature, `cfg` 还能通过很多其他标志来进行条件编译, 比如 `target` 等
+
+默认情况下没有 Feature 被开启, 你可以通过指定默认 Feature
+
+```toml
+[features]
+default = ["feature1"]
+
+feature1 = []
+feature2 = ["feature1"]
+```
+
+此外你也可以通过`--features "feature1 feature2"` 来在编译运行时临时手动开启某些 Feature, 除此之外还有两个命令行 flag
+
+- `--all-features`: 启用当前 Crate 所有 Feature
+- `--no-default-features`: 禁用当前 Crate 默认 Feature
+
+Feature 还可以做到可选依赖, 例如
+
+```toml
+[dependencies]
+crate1 = { version = "1.0", optional = true }
+
+[features]
+feature1 = ["crate1"]
+```
+
+这样只有当开启 `feature1` 时, `crate1` 才会作为依赖
+
+同样的, 你也可以开启或关闭依赖自身的 Feature
+
+```toml
+[dependencies]
+crate1 = { version = "1.0", features = ["feature1"] }
+crate1 = { version = "1.0", , default-features = false, features = ["feature2"] } # 这将禁用默认 Feature 并单独开启指定 Feature
+```
+
+### 编译配置 -- Profile
+
+不同的编译配置可配置编译器的行为, 主要在优化方面, 默认情况下, Rust 有四种编译配置 `dev`, `release`, `test` (继承自 `dev`), `bench` (继承自 `release`)
+
+> 可以发现 `release` 配置对应 `target/release` 文件夹, 但 `dev` 对应的却是 `target/debug` 文件夹, 其实这是个有趣的历史遗留问题
+
+可以在 `Cargo.toml` 中调节这些行为, 默认配置如下
+
+```toml
+[profile.dev]
+opt-level = 0
+debug = true
+split-debuginfo = '...'  # 平台相关
+debug-assertions = true
+overflow-checks = true
+lto = false
+panic = 'unwind'
+incremental = true
+codegen-units = 256
+rpath = false
+
+[profile.release]
+opt-level = 3
+debug = false
+split-debuginfo = '...'
+debug-assertions = false
+overflow-checks = false
+lto = false
+panic = 'unwind'
+incremental = false
+codegen-units = 16
+rpath = false
+```
+我们来看一些比较常用的
+
+- `opt-level`: 控制优化级别, 通常越高级的优化会导致更慢的编译速度. 但优化级别与性能的关系可能会在你的意料之外, 所以需要自己权衡
+  - `0`: 无优化
+  - `1`: 基本优化
+  - `2`: 一些优化
+  - `3`: 全部优化
+  - `"s"`: 优化二进制文件的大小
+  - `"z"`: 优化二进制文件大小, 但也会关闭循环向量化
+
+- `debug`: 控制最终二进制文件输出的 debug 信息量
+  - `0` 或 `false`: 不输出任何 debug 信息
+  - `1`: 行信息
+  - `2`: 完整的 debug 信息
+
+- `debug-assertions`: 开启或关闭其中一个条件编译选项 `#[cfg(debug_assertions)]`, 选项是布尔值
+
+- `lto`: 控制 LLVM 的链接时优化 (Link Time Optimizations ). 大幅增加链接时间, 但可以生成更加优化的代码
+  - `false`: 只对本地包进行 `"thin"` LTO 优化，若代码生成单元数为 `1` 或者 `opt-level` 为 `0`, 则不会进行任何 LTO 优化
+  - `"thin"`: 相比 `"fat"` 来说，它仅牺牲了一点性能，但是换来了链接时间的可观减少
+  - `true` 或 `"fat"`: 对依赖图中的所有包进行 `"fat"` LTO 优化
+  - `"off"`: 禁用 LTO
+
+- `panic`: 控制 panic 策略
+  - `"unwind"`: 遇到 panic 后对栈进行展开
+  - `"abort"`: 遇到 panic 后直接停止程序, 剩余清理工作交给操作系统或不处理
+
+- `incremental`: 用于开启或关闭增量编译, 选项是布尔值
+
+- `codegen-units`: 指定一个包会被分割为多少个代码生成单元. 分割较多, 可增加并行编译速度, 但会一定程度降低性能
+  - 对于增量编译默认值是 256, 非增量编译是 16
+
+### WorkSpace
+
 而对于 WorkSpace, 它可以组织多个 Package, `Cargo.toml` 的内容可能是这样的
 
 ```toml
