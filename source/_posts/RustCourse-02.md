@@ -132,13 +132,13 @@ cargo build --release # Release 模式 --release 代表优化编译
 - 默认的 Bin Crate入口文件是 `src/main.rs`
 - 其他可选的可执行文件位于 `src/bin/*.rs`
     - 这里每一个 `.rs` 文件均对应一个可执行文件, 即一个 Bin Crate
-    - 可通过 `cargo run --bin <NAME>` 来运行
+    - 可通过 `cargo run --bin <NAME>` 运行
 - 外部测试源代码文件位于 `tests/*.rs`
     - 这里每一个 `.rs` 文件内都可以有多个测试函数和测试模块
     - 可通过 `cargo test` 运行里面的所有测试
-    - 可通过 `cargo test <KEYWORD>` 来运行测试函数名包含指定关键字的函数
+    - 可通过 `cargo test <KEYWORD>` 来运行所有测试函数名包含指定关键字的函数
 - 示例程序源代码文件位于 `examples/*.rs`
-    - 需要在 `Cargo.toml` 文件手动指定, 通过 `cargo run --example <NAME>` 运行
+    - 可通过 `cargo run --example <NAME>` 运行
 - 基准测试源代码文件位于 `benches`
 - `target`: 由 Cargo 自动生成, 包含下载的依赖项和编译缓存等
 
@@ -251,7 +251,9 @@ path = "tests/test2.rs"
 
 ## 定义示例和可执行文件
 
-Example 用例的描述以及 Bin 可执行文件的描述也是 Cargo 的常用功能, 其中之前提到的特殊的 Bin 文件夹可被自动识别无需手动配置
+Example 用例的描述以及 Bin 可执行文件的描述也是 Cargo 的常用功能
+
+和测试不同, 这两个不能定义和主要代码耦合在一起, 必须要独立的文件, 而且必须包含 `main` 函数
 
 ```toml
 [[example]]
@@ -265,7 +267,7 @@ path = "bin/bin1.rs"
 
 同样的
 
-1. 如果没有在 `Cargo.toml` 里定义这些入口, 那么 `examples`(或 `bin`) 目录 (不包括子目录) 下的每个 `.rs` 文件都被当作入口
+1. 如果没有在 `Cargo.toml` 里定义这些入口, 那么 `examples`(或 `src/bin`) 目录 (不包括子目录) 下的每个 `.rs` 文件都被当作入口
 2. 如果在 `Cargo.toml` 里定义了入口, 那么定义的那些 `.rs` 文件就是入口, 不再默认指定任何集成测试入口
 
 这些 Examples 和 Bins, 需要通过文件名 `cargo run --example <NAME>` 或者 `cargo run --bin <NAME>` 来运行
