@@ -73,7 +73,7 @@ See 'cargo help <command>' for more information on a specific command.
 
 其中一些比较常用的, 例如 `build` 和 `run` 等还定义了单字母别名以方便使用
 
-还有一些例如 `add`, `remove` 等命令, 原来有社区的 `cargo-edit` 提供, 后来被整合到了官方内部
+还有一些例如 `add`, `remove` 等命令, 原来由社区的 `cargo-edit` 提供, 后来被整合到了官方内部
 
 下面我们简单的使用一下
 
@@ -125,6 +125,17 @@ cargo build --release # Release 模式 --release 代表优化编译
 ./target/release/hello_cargo.exe
 ```
 
+## 其他Cargo命令
+
+- `cargo add <NAME> <OPTIONS>`: 添加依赖
+- `cargo remove <NAME>`: 删除依赖
+- `cargo update`: 根据 `Cargo.toml` 重新检索并更新各种依赖项的信息, 并写入 `Cargo.lock`
+- `cargo clean`: 清理 `target` 文件夹中的所有内容
+- `cargo install <NAME> <OPTIONS>`: 安装 `crates.io` 可用于实际的生产的可执行文件
+- `cargo check`: 代码检查工具, 不执行真正的 Build, 所以会快一点
+- `cargo fmt`: 代码格式化工具
+- `cargo clippy`: 检查和优化 Rust 代码的工具
+
 ## Cargo 配置
 
 在 Cargo 的安装目录下, 你可以创建一个名为 `config.toml` 的文件用于全局配置 Cargo
@@ -159,9 +170,9 @@ git-fetch-with-cli = true
 check-revoke = false
 ```
 
-这将禁用 **证书吊销检查**, 可以解决某些网络环境下出现的SSL证书验证问题
+这将禁用 **证书吊销检查**, 可以解决某些网络环境下出现的 SSL 证书验证问题
 
-如果你安装了 [**Sscache**](https://github.com/mozilla/sccache), 一个由 Mozilla 开发的编译缓存管理器, 并配置好了相关环境变量, 你就可以使用以下配置为 Rust 添加一个全局的编译缓存, 这可以显著降低从头编译程序的时间, 相当于一个共享的 `target` 目录
+如果你安装了 [**Sccache**](https://github.com/mozilla/sccache), 一个由 Mozilla 开发的编译缓存管理器, 并配置好了相关环境变量, 你就可以使用以下配置为 Rust 添加一个全局的编译缓存, 这可以显著降低从头编译程序的时间, 相当于一个共享的 `target` 目录
 
 ```toml
 [build]
@@ -251,9 +262,9 @@ rustup target add riscv64gc-unknown-none-elf
 - 外部测试源代码文件位于 `tests/*.rs`
     - 这里每一个 `.rs` 文件内都可以有多个测试函数和测试模块
     - 可通过 `cargo test` 运行里面的所有测试
-    - 可通过 `cargo test <KEYWORD>` 来运行测试函数名包含指定关键字的函数
+    - 可通过 `cargo test <KEYWORD>` 来运行所有测试函数名包含指定关键字的函数
 - 示例程序源代码文件位于 `examples/*.rs`
-    - 需要在 `Cargo.toml` 文件手动指定, 通过 `cargo run --example <NAME>` 运行
+    - 可通过 `cargo run --example <NAME>` 运行
 - 基准测试源代码文件位于 `benches`
 - `target`: 由 Cargo 自动生成, 包含下载的依赖项和编译缓存等
 
@@ -353,7 +364,26 @@ Cargo 另一个重要的功能, 即将软件开发过程中必要且非常重要
 
 单元测试通常和代码耦合在一起, 使用 `#[test]` 属性宏来标记单个测试函数
 
-集成测试也可以和代码耦合在一起, 可以通过 `#[cfg(test)]` 属性宏标记一个模块来包裹多个测试函数
+集成测试也可以和代码耦合在一起, 可以通过 `#[cfg(test)]` 属性宏标记一个模块来包裹多个测试函数, 例如
+
+```rust
+#[test]
+fn test1() {}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test2_foo() {}
+
+    #[ignore]
+    #[test]
+    fn test3() {}
+
+    #[should_panic]
+    #[test]
+    fn test4_foo() { panic!() }
+}
+```
 
 独立在外的集成测试可以通过 `Cargo.toml` 文件中的 `[[test]]` 段落进行描述
 
@@ -373,12 +403,14 @@ path = "tests/test2.rs"
 
 看看, 定义集成测试就是如此简单, 但根据我们之前提到的一点, 有以下注意事项:
 
-1. 如果没有在 `Cargo.toml` 里定义集成测试的入口, 那么 `tests` 目录 (不包括子目录) 下的每个 `.rs` 文件被当作集成测试入口
+1. 如果没有在 `Cargo.toml` 里定义集成测试的入口, 那么 `tests` 目录 (不包括子目录) 下的每个 `.rs` 文件都被当作集成测试入口
 2. 如果在 `Cargo.toml` 里定义了集成测试入口, 那么定义的那些 `.rs` 文件就是入口, 不再默认指定任何集成测试入口
+
+通过 `cargo test` 将运行所有未被忽略的测试, 指定关键词后会运行所有包含测试的文件并过滤出那些函数名包含指定关键词的测试, 例如在上面的例子中运行 `cargo test foo`
 
 ## 定义示例和可执行文件
 
-Example 用例的描述以及 Bin 用例的描述也是 Cargo 的常用功能, 其中之前提到的特殊的 Bin 文件夹可被自动识别无需手动配置
+Example 用例的描述以及 Bin 可执行文件的描述也是 Cargo 的常用功能, 其中之前提到的特殊的 Bin 文件夹可被自动识别无需手动配置
 
 ```toml
 [[example]]
@@ -390,17 +422,12 @@ name = "bin1"
 path = "bin/bin1.rs"
 ```
 
-对于 `[[example]]` 和 `[[bin]]` 段落中声明的 Examples 和 Bins, 需要通过 `cargo run --example <NAME>` 或者 `cargo run --bin <NAME>` 来运行
+同样的
 
-## 其他Cargo命令
+1. 如果没有在 `Cargo.toml` 里定义这些入口, 那么 `examples`(或 `bin`) 目录 (不包括子目录) 下的每个 `.rs` 文件都被当作入口
+2. 如果在 `Cargo.toml` 里定义了入口, 那么定义的那些 `.rs` 文件就是入口, 不再默认指定任何集成测试入口
 
-- `cargo add <NAME> <OPTIONS>`: 添加依赖
-- `cargo remove <NAME>`: 删除依赖
-- `cargo clean`: 清理 `target` 文件夹中的所有内容
-- `cargo update`: 根据 `Cargo.toml` 重新检索并更新各种依赖项的信息, 并写入 `Cargo.lock`
-- `cargo install <NAME> <OPTIONS>`: 安装 `crates.io` 可用于实际的生产的可执行文件
-- `cargo fmt`: 代码格式化工具
-- `cargo check`: 代码检查工具, 不执行真正的 Build, 所以会快一点
+这些 Examples 和 Bins, 需要通过文件名 `cargo run --example <NAME>` 或者 `cargo run --bin <NAME>` 来运行
 
 # Rustfmt 与 Clippy
 
