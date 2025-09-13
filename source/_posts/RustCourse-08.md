@@ -268,6 +268,7 @@ rustup target add riscv64gc-unknown-none-elf
 
 然后是可选结构
 
+- `build.rs`: 构建脚本
 - `tests/*.rs`: 外部测试源代码文件
   - 这里每一个 `.rs` 文件内都可以有多个测试函数和测试模块
   - 可通过 `cargo test` 运行里面的所有测试
@@ -549,6 +550,8 @@ path = "tests/test2.rs"
 
 通过 `cargo test` 将运行所有未被忽略的测试, 指定关键词后会运行所有包含测试的文件并过滤出那些函数名包含指定关键词的测试, 例如在上面的例子中运行 `cargo test foo`
 
+此外, 测试代码以及下面介绍的示例代码也可以依赖外部 Crate, 不过需要定义在 `[dev-dependencies]` 字段下
+
 ## 定义示例和可执行文件
 
 Example 用例的描述以及 Bin 可执行文件的描述也是 Cargo 的常用功能
@@ -571,6 +574,29 @@ path = "bin/bin1.rs"
 2. 如果在 `Cargo.toml` 里定义了入口, 那么定义的那些 `.rs` 文件就是入口, 不再默认指定任何集成测试入口
 
 这些 Examples 和 Bins, 需要通过文件名 `cargo run --example <NAME>` 或者 `cargo run --bin <NAME>` 来运行
+
+## 构建脚本
+
+根目录下的 `build.rs` 是一个特殊的文件, 它相当于在编译之前被执行的 Rust 代码. 可以对你接下来真正要编译的项目代码进行预处理操作
+
+作为一个可执行文件那么肯定需要包含 `main` 函数. 同样的, 它也可以依赖外部 Crate, 需要定义在 `build-dependencies` 字段下
+
+一个常见的使用场景是给可执行文件添加图标, 对于 Windows 平台
+
+```toml
+[target.'cfg(windows)'.build-dependencies]
+embed-resource = "3.0.2"
+```
+
+```rust
+#[cfg(target_os = "windows")]
+fn main() {
+    embed_resource::compile("./static/icon/icon.rc", embed_resource::NONE).manifest_optional().unwrap();
+}
+
+#[cfg(not(target_os = "windows"))]
+fn main() {}
+```
 
 # Rustfmt 与 Clippy
 
@@ -696,5 +722,31 @@ fn sub_bytes(&self, state: &mut [u8; 16]) {
 
 关于 Lint 规则, 由于实在太多, 感兴趣可以在 [官方文档](https://rust-lang.github.io/rust-clippy/master/index.html) 自行查看
 
+# crates.io 与 CI
 
-# crate.io 与 CI
+因为 `crates.io` 的访问速度在国内比较慢, 所以我们学 Rust 的第一步总是先配置镜像源. 但别忘了, 它才是 Rust 官方的 Crate 注册管理中心. 注意别丢了 URL 中的 "s"
+
+多数公开的 Crate 都托管在上面, 日常你就可以在上面寻找自己所需的 Crate.
+
+你自己也可以发布自己的 Crate, 只需要在上面注册一个账号, 获取登录 Token, 使用 `cargo login [TOKEN]` 完成登录, 就可以使用 `cargo publish` 发布啦. 当然建议先使用 `cargo publish --dry-run` 检查一下代码库有没有错误或警告, 这也会把代码库打包到一个 `target/package/*.crate` 文件. 一般要求这个文件不能超过 10MB, 你可以在 Cargo.toml 中配置声明包含或排除哪些文件
+
+```toml
+[package]
+exclude = [
+    "videos/*",
+]
+
+include = [
+    "**/*.rs",
+    "Cargo.toml",
+]
+```
+
+Crate 一经发布无法修改无法删除, 只能通过新的版本号覆盖上去. 所以发布前需要慎重考虑一下. 并且 Crate 的名字遵循先到先得的原则.
+
+同时如果发布的是 Lib Crate, 记得做好详细的文档注释, 它会被自动渲染成漂亮的文档托管在 `docs.rs` 上
+
+你也可以在本地提前渲染文档进行查看
+
+1. `rustdoc *.rs`: 用于单个文件
+2. `cargo doc`: 用于整个项目, 最好加上 `--no-depth` 参数, 否则将给你所有的依赖项也生成文档
