@@ -10,17 +10,13 @@ categories:
 cover: https://fontlos.com/cover/ferris.png
 ---
 
-> 关于 Cargo 和 WorkSpace 的内容在 [第二节](https://fontlos.com/post/RustCourse-02) 已经大致说过了, 这里再重新梳理一下
-
 # Cargo
 
-仅仅使用 Rustc 编译简单程序是没问题的, 不过随着项目的增长, Rustc 就会难以满足需要, 这种时候就需要包管理工具了
+我们都知道 Rust 的编译器是 Rustc, 对于单文件简单程序使用 Rustc 编译是没问题的, 不过随着项目的增长, Rustc 就会难以满足需要
 
-## Cargo 简介
+代码管理对于编程来说一直是一个重要的问题, Rust 作为一枚现代语言, 综合了现有语言管理工具的优点, 为我们提供了一个强大的代码组织管理工具 --- **Cargo**. Cargo 提供了一系列的工具. 从项目的建立, 构建, 测试, 运行直至部署, 为 Rust 项目的管理提供尽可能完整的手段, 极大的减轻了开发复杂度. 同时与 Rust 语言及其编译器 Rustc 本身的各种特性紧密结合
 
-代码管理对于编程来说一直是一个重要的问题, 各种不同的语言也都会采用不同的代码管理器, Rust 作为一枚现代语言, 综合了现有语言管理工具的优点, 为我们提供了一个大杀器 --- **Cargo**. Cargo 的强大有目共睹, 包括许多现代新兴的包管理器都或多或少的借鉴了 Cargo, 例如 Python 的 **Uv**
-
-作为 Rust 的代码组织管理工具, Cargo 提供了一系列的工具. 从项目的建立, 构建到测试, 运行直至部署, 为 Rust 项目的管理提供尽可能完整的手段, 极大的减轻了开发复杂度. 同时与 Rust 语言及其编译器 Rustc 本身的各种特性紧密结合
+Cargo 的强大有目共睹, 包括许多现代新兴的包管理器都或多或少的借鉴了 Cargo, 例如 Python 的 **Uv**
 
 ## Cargo 简单使用
 
@@ -75,7 +71,7 @@ See 'cargo help <command>' for more information on a specific command.
 
 还有一些例如 `add`, `remove` 等命令, 原来由社区的 `cargo-edit` 提供, 后来被整合到了官方内部
 
-下面我们简单的使用一下, 终端中打开一个文件夹, 输入以下命令
+下面我们简单的使用一下, 在终端中打开一个文件夹, 输入以下命令
 
 ```sh
 cargo new hello_cargo --bin
@@ -83,7 +79,7 @@ cargo new hello_cargo --bin
 
 `--bin` 是一个参数, 代表这是一个 **Bin** crate, 最终将会被编译为二进制可执行文件, Cargo 默认创建 Bin crate, 所以该参数可以不加
 
-查看目录结构. `hello_cargo` 文件夹下有一个 `src` 和一个 `Cargo.toml` 文件, src 文件夹下有一个 `main.rs` 文件, 它也在 hello_cargo 目录初始化了一个 `.git` 仓库, 以及一个 `.gitignore` 文件, 在 VSCode 中我们可以很轻易地使用 Git
+查看目录结构. `hello_cargo` 文件夹下有一个 `src` 和一个 `Cargo.toml` 文件, src 文件夹下有一个 `main.rs` 文件, 它也在 hello_cargo 目录初始化了一个 `.git` 仓库, 以及一个 `.gitignore` 文件
 
 ```
 hello_cargo
@@ -101,20 +97,27 @@ fn main() {
 }
 ```
 
-随后在终端输入以下命令
+随后在终端输入以下命令进行编译
 
 ```sh
 cargo build # Debug 模式
 cargo build --release # Release 模式 --release 代表优化编译
 ```
 
-也可以直接使用 `cargo run` 命令编译并运行
-
 这两个命令分别会在以下文件夹下生成可执行文件
 
 ```
 ./target/debug/hello_cargo.exe
 ./target/release/hello_cargo.exe
+```
+
+也可以直接使用 `cargo run` 命令编译并运行, 当然你同样可以加上 `--release` flag, 可以在终端看到
+
+```sh
+   Compiling hello_cargo v0.1.0 (path\to\hello_cargo)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running `target\debug\hello_cargo.exe`
+Hello, Cargo!
 ```
 
 ## 其他Cargo命令
@@ -130,7 +133,7 @@ cargo build --release # Release 模式 --release 代表优化编译
 
 ## Cargo 配置
 
-在 Cargo 的安装目录下, 你可以创建一个名为 `config.toml` 的文件用于全局配置 Cargo
+在 Cargo 的安装目录下, 你可以创建一个名为 `config` 或 `config.toml` 的文件用于全局配置 Cargo, 前者的优先级更高
 
 例如, 在我们安装完 Rust 后, 通常要配置镜像源以方便我们拉取 Crate 依赖, 以 `rsproxy.cn` 为例, 其官网会建议我们在这个文件内写入以下内容
 
@@ -162,9 +165,9 @@ git-fetch-with-cli = true
 check-revoke = false
 ```
 
-这将禁用 **证书吊销检查**, 可以解决某些网络环境下出现的 SSL 证书验证问题
+这将禁用 **证书吊销检查**, 可以解决某些网络环境下出现的 SSL 证书验证问题, 但关闭验证也可能会导致不安全
 
-如果你安装了 [**Sccache**](https://github.com/mozilla/sccache), 一个由 Mozilla 开发的编译缓存管理器, 并配置好了相关环境变量, 你就可以使用以下配置为 Rust 添加一个全局的编译缓存, 这可以显著降低从头编译程序的时间, 相当于一个共享的 `target` 目录
+如果你安装了 [**Sccache**](https://github.com/mozilla/sccache) (Shared Compilation Cache), 一个由 Mozilla 开发的共享编译缓存管理器, 并配置好了相关环境变量, 你就可以使用以下配置为 Rust 添加一个全局的编译缓存, 在缓存命中的情况下这可以显著降低从头编译程序的时间, 相当于一个共享的 `target` 目录
 
 ```toml
 [build]
@@ -216,6 +219,8 @@ rustup toolchain default nightly
 channel = "nightly"
 ```
 
+如果想更临时一点, 你还可以使用命令行参数, 例如 `cargo +nightly build`
+
 对于每个工具链, 你还可以安装其他的编译目标. 首先切换到对应的工具链, 使用以下命令就可以列出工具链列表
 
 ```sh
@@ -239,26 +244,45 @@ rustup target add riscv64gc-unknown-none-elf
 我们说过 Cargo 是一个强大的包管理工具, 让我们先来介绍以下几个概念:
 
 1. **Crate**: 通常翻译为 **包**, 包括 **Bin Crate (将被编译为可执行文件)** 和 **Lib Crate (将被编译为库文件)**
-2. **Package**: 包的名字已经被 Crate 占用, 这里可以被理解为 **项目**, 一个 Package 包括至多一个 Lib Crate 或任意数量得 Bin Crate 或者两者同时存在. 这一概念容易和 Crate 混淆, 一个方便理解得例子是对于 Bin Crate, 当我们初始化一个 Bin Crate 时看起来就像一个 Package, 这是因为这个 Crate 和 Package 的名字是一样的, 都是项目名. 但别忘了我们还可以在项目中创建其他的不同名字的将被编译为可执行文件的 `.rs` 文件
+2. **Package**: 包的名字已经被 Crate 占用, 这里可以被理解为 **项目**, 一个 Package 包括至多一个 Lib Crate 或至少一个 Bin Crate 或者两者同时存在. 这一概念容易和 Crate 混淆, 举个例子, 对于 Bin Crate, 当我们初始化它时看起来就像一个 Package, 这是因为这个 Crate 和 Package 的名字是一样的, 都是项目名, 但别忘了我们还可以在这个 Package 中创建更多其他 Bin Crate 或者一个 Lib Crate, 例如下面的结构
+   ```
+   hello_cargo
+   ├── Cargo.toml
+   └── src
+       ├── lib.rs
+       └── main.rs
+   ```
 3. **WorkSpace**: **工作空间**, 用于在大型项目中组织多个 Package
 
 一个标准 Cargo Package 目录结构通常如下, 这些目录拥有特殊含义:
 
-- `Cargo.toml` 和 `Cargo.lock` 文件位于项目根目录
-- 源代码位于 `src`
-- 默认的 Lib Crate 入口文件是 `src/lib.rs`
-- 默认的 Bin Crate入口文件是 `src/main.rs`
-- 其他可选的可执行文件位于 `src/bin/*.rs`
-    - 这里每一个 `.rs` 文件均对应一个可执行文件, 即一个 Bin Crate
+首先是基本结构
+
+- `Cargo.toml`: 项目的数据描述文件
+- `src`: 源代码目录
+  - `src/lib.rs`: 默认的 Lib Crate 入口文件
+  - `src/main.rs`: 默认的 Bin Crate 入口文件
+  - `src/bin/*.rs`: 其他可选的 Bin Crate 入口文件
+    - 这里每一个 `.rs` 文件均对应一个可执行文件
     - 可通过 `cargo run --bin <NAME>` 运行
-- 外部测试源代码文件位于 `tests/*.rs`
-    - 这里每一个 `.rs` 文件内都可以有多个测试函数和测试模块
-    - 可通过 `cargo test` 运行里面的所有测试
-    - 可通过 `cargo test <KEYWORD>` 来运行所有测试函数名包含指定关键字的函数
-- 示例程序源代码文件位于 `examples/*.rs`
-    - 可通过 `cargo run --example <NAME>` 运行
-- 基准测试源代码文件位于 `benches`
-- `target`: 由 Cargo 自动生成, 包含下载的依赖项和编译缓存等
+
+然后是可选结构
+
+- `tests/*.rs`: 外部测试源代码文件
+  - 这里每一个 `.rs` 文件内都可以有多个测试函数和测试模块
+  - 可通过 `cargo test` 运行里面的所有测试
+  - 可通过 `cargo test <KEYWORD>` 来运行所有函数名包含指定关键字的测试
+- `examples/*.rs`: 示例程序源代码文件
+  - 这里每一个 `.rs` 文件实际上也对应一个可执行文件
+  - 可通过 `cargo run --example <NAME>` 运行
+- `benches/*.rs`: 基准测试源代码文件
+
+最后是编译器自动生成的结构
+
+- `Cargo.lock`: 项目依赖详细清单文件
+- `target`: 包含下载的依赖项和编译缓存等
+
+下面我们详细介绍一下这些
 
 ## Cargo.toml 与 Cargo.lock
 
@@ -288,18 +312,19 @@ crate6 = { git = "https://github.com/user/repo" }
 crate7 = { path = "path/to/crate" }
 ```
 
-**TOML** 是 Rust 的官方配置文件格式, 由像 `[package]` 或 `[dependencies]` 这样的段落组成, 每一个段落又由多个字段组成, 这些段落和字段就描述了项目组织的基本信息
+**TOML** 是 Rust 的官方配置文件格式, 我们在之前介绍 Cargo 配置时就已经见过它了, 由像 `[package]` 或 `[dependencies]` 这样的段落组成, 每一个段落又由多个字段组成, 这些段落和字段就描述了项目组织的基本信息
 
 - `package` 段落
     - `name` 字段表明项目的名称. 当发布 crate 时, `crates.io` 将使用此字段标明的名称. 这也是编译时输出的二进制可执行文件的名称
     - `version` 字段是使用 **语义版本控制** 的 crate 版本号
     - `description` 字段是对项目的描述
     - `authors` 字段表明发布 crate 时的作者列表
-    - `edition` 字段是对项目的 **Edition (版次)** 声明, 作为一门成熟的语言很重要的一点就是向后兼容. 但有的时候, 面对一些历史遗留问题, 做出一些不兼容的更改也是有需要的, Rust 通过不同的版次引入不兼容的新特性或者删除旧的特性
+    - `edition` 字段是对项目的 **Edition (版次)** 声明, 作为一门成熟的语言很重要的一点就是向后兼容. 但有的时候, 面对一些历史遗留问题, 做出一些不兼容的更改也是有需要的, Rust 通过不同的版次引入不兼容的新特性或者删除旧的特性, 截止到目前, Rust 有 `2015`, `2018`, `2021`, `2024` 四个版次
 - `dependencies` 段落可以让你为项目添加依赖, 包括一下几种:
     - 基于 Rust 官方仓库, 通过版本说明来描述
     - 基于项目源代码的 Git 仓库地址, 通过 URL 来描述
     - 基于本地项目的绝对路径或者相对路径
+    - 来自当前工作空间
 
 `Cargo.lock` 文件不需要直接修改, 是 Cargo 工具根据 `Cargo.toml` 生成的项目依赖详细清单文件, 如果不手动修改 `Cargo.toml` 或执行 `cargo update` 会锁定依赖项的版本, 即使包含通配符等
 
@@ -322,7 +347,7 @@ feature2 = ["feature1"] # 这表示启用 feature2 的同时会启用 feature1
 println!("Feature 1!");
 ```
 
-不只是 Feature, `cfg` 还能通过很多其他标志来进行条件编译, 比如 `target` 等
+不只是 Feature, `cfg` 还能通过很多其他标志来进行条件编译, 比如 `target` 等. 你还可以通过 `not()`, `any()`, `all()` 等来组合条件
 
 默认情况下没有 Feature 被开启, 你可以通过指定默认 Feature
 
@@ -334,7 +359,7 @@ feature1 = []
 feature2 = ["feature1"]
 ```
 
-此外你也可以通过`--features "feature1 feature2"` 来在编译运行时临时手动开启某些 Feature, 除此之外还有两个命令行 flag
+此外你也可以通过`cargo run --features "feature1 feature2"` 来在编译运行时临时手动开启某些 Feature, 除此之外还有两个命令行 flag
 
 - `--all-features`: 启用当前 Crate 所有 Feature
 - `--no-default-features`: 禁用当前 Crate 默认 Feature
@@ -392,6 +417,7 @@ incremental = false
 codegen-units = 16
 rpath = false
 ```
+
 我们来看一些比较常用的
 
 - `opt-level`: 控制优化级别, 通常越高级的优化会导致更慢的编译速度. 但优化级别与性能的关系可能会在你的意料之外, 所以需要自己权衡
@@ -421,15 +447,15 @@ rpath = false
 
 - `incremental`: 用于开启或关闭增量编译, 选项是布尔值
 
-- `codegen-units`: 指定一个包会被分割为多少个代码生成单元. 分割较多, 可增加并行编译速度, 但会一定程度降低性能
-  - 对于增量编译默认值是 256, 非增量编译是 16
+- `codegen-units`: 指定一个包会被分割为多少个代码生成单元. 分割较多, 可增加并行编译速度, 但会一定程度降低性能.
 
 ## 工作空间 -- WorkSpace
 
-WorkSpace 可以组织多个 Package, `Cargo.toml` 的内容类型如下
+WorkSpace 可以组织多个 Package, 你同样需要在根目录创建一个 `Cargo.toml` 文件, 例如
 
 ```toml
 [workspace]
+resolver = "2" # 建议启用第二版解析器, 这在 2021 版次引入, 在 2024 版次已经成为默认值可以无需声明
 members = [
     "path/to/package1",
     "path/to/package2",
@@ -440,6 +466,10 @@ exclude = [
     "lib/package3"
 ]
 ```
+
+其中 `members` 里面就是当前 WorkSpace 所包含并管理的 Package. 你可以写明相对路径, 也可以使用通配符, 当你使用通配符时也可以使用 `exclude` 来排除掉一些 Package
+
+你可以在正常 Cargo 命令后面新增一个 `--package [PACKAGE]` flag 来操作指定 Package
 
 你可以在 WorkSpace 定义一些 Package 信息, 例如
 
@@ -471,11 +501,11 @@ crate = { workspace = true }
 
 ## 定义集成测试用例
 
-Cargo 另一个重要的功能, 即将软件开发过程中必要且非常重要的测试环节进行集成, 并通过代码属性声明或者 `Cargo.toml` 文件描述来对测试进行管理
+Cargo 另一个重要的功能, 即对软件开发过程中非常重要的测试环节进行集成, 并通过代码属性声明或者 `Cargo.toml` 文件描述来对测试进行管理
 
-单元测试通常和代码耦合在一起, 使用 `#[test]` 属性宏来标记单个测试函数
+单元测试通常和代码耦合在一起, 使用 `#[test]` 来标记单个测试函数
 
-集成测试也可以和代码耦合在一起, 可以通过 `#[cfg(test)]` 属性宏标记一个模块来包裹多个测试函数, 例如
+集成测试也可以和代码耦合在一起, 可以通过 `#[cfg(test)]` 标记一个模块来包裹多个测试函数, 例如
 
 ```rust
 #[test]
@@ -543,5 +573,128 @@ path = "bin/bin1.rs"
 这些 Examples 和 Bins, 需要通过文件名 `cargo run --example <NAME>` 或者 `cargo run --bin <NAME>` 来运行
 
 # Rustfmt 与 Clippy
+
+**Rustfmt** 是 Rust 官方提供的自动 **代码格式化** 工具. 它的核心目标是基于一套明确的, 社区共识的风格指南来格式化 Rust 代码，从而增强代码可读性, 促进代码一致性
+
+在你安装 Rust 时 Rustfmt 就一并安装了, 我们可以像使用 Rustc 那样简单的使用它来格式化单个文件. 那么当然, 在日常开发中我们很少会单独使用它, 而是通过我们的 Cargo 来统一格式化整个项目的代码, 只需要简单的一行 `cargo fmt`, 这将会就地格式化你所有的代码. 如果你只想检查格式而非修改, 可以使用 `cargo fmt -- --check`
+
+Rustfmt 已经有了一套非常优秀的默认风格. 当然如果你需要, 你同样可以在项目根目录创建一个 `rustfmt.toml` 来配置它, 这里我们展示一些常见选项, 你也可以使用 `rustfmt --help=config` 来查看所有可配置项
+
+```toml
+# 缩进风格: 空格或制表符 (tab)
+hard_tabs = false
+# 每个缩进级别的空格数
+tab_spaces = 4
+
+# 最大行宽: 超过此宽度的代码会被换行
+max_width = 100
+
+# 将多个 `use` 语句合并为一个（例如：`use std::{io, fs};`）
+merge_imports = true
+
+# 匹配表达式（match）的样式："SameLine" 或 "Default"
+match_arm_blocks = false
+
+# 错误后尽最大努力格式化, 而不是中止
+error_on_line_overflow = false
+error_on_unformatted = false
+
+# 控制 where 子句的位置
+where_single_line = false
+
+# 对导入进行重新排序和分组
+reorder_imports = true
+```
+
+有些时候你可能需要 Rustfmt 忽略掉部分代码块, 这时只需要使用 `#[rustfmt::skip]` 进行标记, 例如一个你精心排列整齐的矩阵
+
+```rust
+#[rustfmt::skip]
+const PC1: [usize; 56] = [
+    57, 49, 41, 33, 25, 17, 09,
+    01, 58, 50, 42, 34, 26, 18,
+    10, 02, 59, 51, 43, 35, 27,
+    19, 11, 03, 60, 52, 44, 36,
+    63, 55, 47, 39, 31, 23, 15,
+    07, 62, 54, 46, 38, 30, 22,
+    14, 06, 61, 53, 45, 37, 29,
+    21, 13, 05, 28, 20, 12, 04,
+];
+```
+
+Clippy 是 Rust 编译器的一个官方插件, 它是一个强大的 Linter 工具, 比 `cargo check` 和 `cargo fmt` 更进一步, 其核心作用包括
+
+- 捕捉常见错误和反模式: 识别那些虽然能通过编译, 但可能存在潜在问题, 不够优雅或效率低下的代码
+- 推行最佳实践: 鼓励使用更符合 Rust 语言习惯, 更安全, 更高效的写法
+- 提升代码质量: 充当一位审查员, 帮助你写出更好的 Rust 代码
+- 辅助学习 Rust: 包括 Rust 编译器也是, 通过其警告和建议, 新手可以快速了解 Rust 的惯用写法和各种陷阱
+
+在你安装 Rust 时 Clippy 就一并安装了, 默认包含了很多的 Lint, 你可以使用 `cargo clippy` 来很方便的调用它
+
+例如对于我们上面的矩阵, 当你调用它时就会提示
+
+```sh
+warning: this is a decimal constant
+ --> src\main.rs:3:37
+  |
+3 |             57, 49, 41, 33, 25, 17, 09,
+  |                                     ^^
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#zero_prefixed_literal
+  = note: `#[warn(clippy::zero_prefixed_literal)]` on by default
+help: if you mean to use a decimal constant, remove the `0` to avoid confusion
+  |
+3 -             57, 49, 41, 33, 25, 17, 09,
+3 +             57, 49, 41, 33, 25, 17, 9,
+```
+
+它的意思是说在类 C 语言中, 前导零表示这个数是八进制, 可能会对有这方面经验的人造成误解, 提醒你去掉前导零. 不过 Rust 本身没有这个约定. 所以对于我们辛辛苦苦排列整齐的矩阵, 你可以使用 `#[allow(clippy::zero_prefixed_literal)]` 来关掉这个警告
+
+> 原文的描述也很有趣 "In some languages (including the infamous C language and most of its family), this marks an octal constant. In Rust however, this is a decimal constant. This could be confusing for both the writer and a reader of the constant."
+
+Clippy 还有很多更强大的功能, 例如对于下面这个函数
+
+```rust
+fn sub_bytes(&self, state: &mut [u8; 16]) {
+    for i in 0..16 {
+        state[i] = self.sub_byte(state[i]);
+    }
+}
+```
+
+这将会提示你
+
+```sh
+warning: the loop variable `i` is only used to index `state`
+   --> src\crypto\aes.rs:109:18
+    |
+109 |         for i in 0..16 {
+    |                  ^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#needless_range_loop
+    = note: `#[warn(clippy::needless_range_loop)]` on by default
+help: consider using an iterator
+    |
+109 -         for i in 0..16 {
+109 +         for <item> in state.iter_mut().take(16) {
+    |
+```
+
+它的意思是让你使用迭代器以更安全的操作可变引用, 而无需这个无意义的索引变量, 可简单修改为
+
+```rust
+fn sub_bytes(&self, state: &mut [u8; 16]) {
+    for s in state.iter_mut() {
+        *s = self.sub_byte(*s);
+    }
+}
+```
+
+对于真正的开发环境, 定期运行 Lint 检查是很有必要的, 还可以使用 `cargo clippy -- -D warnings` 让检查结果不再是警告而是错误, 来强制团队解决这些问题
+
+此外, 你可以使用 `cargo fix --clippy` 来尝试自动修复这些警告
+
+关于 Lint 规则, 由于实在太多, 感兴趣可以在 [官方文档](https://rust-lang.github.io/rust-clippy/master/index.html) 自行查看
+
 
 # crate.io 与 CI
