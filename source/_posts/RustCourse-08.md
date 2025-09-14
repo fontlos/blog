@@ -598,7 +598,7 @@ fn main() {
 fn main() {}
 ```
 
-# Rustfmt 与 Clippy
+# Rustfmt
 
 **Rustfmt** 是 Rust 官方提供的自动 **代码格式化** 工具. 它的核心目标是基于一套明确的, 社区共识的风格指南来格式化 Rust 代码，从而增强代码可读性, 促进代码一致性
 
@@ -647,6 +647,8 @@ const PC1: [usize; 56] = [
     21, 13, 05, 28, 20, 12, 04,
 ];
 ```
+
+# Clippy
 
 Clippy 是 Rust 编译器的一个官方插件, 它是一个强大的 Linter 工具, 比 `cargo check` 和 `cargo fmt` 更进一步, 其核心作用包括
 
@@ -722,7 +724,7 @@ fn sub_bytes(&self, state: &mut [u8; 16]) {
 
 关于 Lint 规则, 由于实在太多, 感兴趣可以在 [官方文档](https://rust-lang.github.io/rust-clippy/master/index.html) 自行查看
 
-# crates.io 与 CI
+# crates.io
 
 因为 `crates.io` 的访问速度在国内比较慢, 所以我们学 Rust 的第一步总是先配置镜像源. 但别忘了, 它才是 Rust 官方的 Crate 注册管理中心. 注意别丢了 URL 中的 "s"
 
@@ -750,3 +752,157 @@ Crate 一经发布无法修改无法删除, 只能通过新的版本号覆盖上
 
 1. `rustdoc *.rs`: 用于单个文件
 2. `cargo doc`: 用于整个项目, 最好加上 `--no-depth` 参数, 否则将给你所有的依赖项也生成文档
+
+# CI 持续集成
+
+**CI (Continuous Integration)** 是软件开发中的重要环节. 简单来说, 这是一个自动化服务, 会定期对项目代码进行拉取, 执行自动化检查, 构建, 发布等任务. 它有一个统一的运行环境, 无需反复配置, 同时也无需手动反复执行那些琐碎的命令. 包括我们上面提到的 `cargo fmt`, `cargo clippy`, `cargo check`, `cargo build`, `cargo publish` 都可以通过持续集成来完成, 稳定高效且可靠
+
+有许多厂商都提供了持续集成服务, 在这里我们主要介绍 **Github Actions**. 我们先简述一下其几个核心概念
+
+- GitHub Actions: 每个项目都可以拥有一个 Actions, 其可以包含多个工作流
+- Workflow: 工作流, 描述了一次持续集成的过程
+- Job: 作业, 一个工作流可以包含多个作业, 作业之间可以并行执行, 也可以有依赖关系, 例如先为多个平台并行构建, 都完成之后一并发布
+- Step: 步骤, 每个作业由多个步骤组成, 按照顺序一步一步完成
+- Action: 动作, 每个步骤可以包含多个动作
+
+作为 Github 的官方服务, Actions 与 Github 进行了深度整合, 其本身就可以是一个 Github 项目. 因此你可以直接引用使用别人制作好的 Action, 也可以发布自己的 Action 给别人使用, 只需要简单的 `Username/RepoName@Version`
+
+为自己的项目启用 Actions 只需要在项目根目录创建 `.github/workflows/*.yml`, 这里面每个 `.yml` 文件都将被识别成一个独立的 Workflow, YML 文件通过缩进区分层级, 因此编写时要注意缩进.
+
+首先在 Github 创建一个项目, 至于其他的密钥配置就不多赘述了, 确保你拥有推送权限. 注意一点, 如果你希望你的 Workflow 能够发布 Release 及拥有写入权限, 需要导航到项目的 **Settings - Actions - General - Workflow permissions** 勾选 **Read and write permissions** 并保存, 然后将项目拉取到本地
+
+下面以我实际使用的一个为例
+
+```yml
+# 工作流默认名称, 当你手动执行时就会显示这个名字
+name: Build and Release
+
+# 工作流触发时刻
+on:
+  # 手动触发
+  workflow_dispatch:
+  # 当发生 push 时
+  push:
+    # push 的内容需要是 tag
+    tags:
+      # 要求 tag 的格式
+      - 'v*.*.*'
+
+jobs:
+  # 一个名为 build 的作业
+  build:
+    # 运行的系统环境
+    runs-on: windows-latest
+    # 声明整个作业的全局环境变量
+    env:
+      RELEASE_NAME: ""
+      TAG_NAME: ""
+      PRERELEASE: ""
+      RELEASE_BODY: ""
+
+    # 第一个步骤
+    steps:
+    # 步骤的名字, 也会显示在 Actions 日志中
+    - name: Checkout code
+      # 引用其他人的 Action
+      uses: actions/checkout@v4
+      # 对该 Action 添加的额外参数
+      with:
+        fetch-depth: 0
+
+    - name: Setup Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Build for Windows
+      # 可以通过管道直接执行命令
+      run: |
+        cargo build --release
+        tar -acf ./Defender-rs.zip -C ./target/release defender.exe defender_core.dll
+        cargo build --lib
+        Copy-Item -Force .\target\release\defender.exe .\target\debug\defender.exe
+        tar -acf ./Defender-rs-debug.zip -C ./target/debug defender.exe defender_core.dll
+
+    # 判断是否为预发布
+    - name: Determine Release Type
+      # id 用于后期获取指定 step 的信息
+      id: determine_release
+      # 修改使用的 shell
+      shell: bash
+      # 这里用到了一些 Github 内置的环境变量
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "RELEASE_NAME=Defender-rs Nightly Build.$(date -u +'%Y.%m.%d')" >> $GITHUB_ENV
+          echo "TAG_NAME=nightly" >> $GITHUB_ENV
+          echo "PRERELEASE=true" >> $GITHUB_ENV
+        else
+          echo "RELEASE_NAME=Defender-rs Release Build.${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "TAG_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "PRERELEASE=false" >> $GITHUB_ENV
+        fi
+
+    - name: Read Release Note
+      id: read_release_note
+      shell: bash
+      run: |
+        if [ -f "./Release.md" ]; then
+          notes_content=$(cat "./Release.md")
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$notes_content" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "content=No release notes provided." >> $GITHUB_OUTPUT
+          echo "::warning file=./Release.md::Release notes file not found. Using default message."
+        fi
+
+    - name: Generate Changelog from PRs
+      id: generate_changelog
+      if: env.PRERELEASE == 'false'
+      uses: mikepenz/release-changelog-builder-action@v5
+      with:
+        configurationJson: |
+          {
+            "categories": [
+              {
+                "title": "## What's Changed",
+                "labels": []
+              }
+            ],
+            "pr_template": "- #{{TITLE}} by @#{{AUTHOR}} (##{{NUMBER}})",
+            "template": "#{{CHANGELOG}}",
+            "pr_trim_body": true,
+            "empty_template": "## No significant changes"
+          }
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Construct Release Body
+      id: construct_body
+      shell: bash
+      # 这里就使用了一个来自之前 step 的输出内容
+      run: |
+        release_body="${{ steps.read_release_note.outputs.content }}"
+        if [[ "${{ env.PRERELEASE }}" == "false" && -n "${{ steps.generate_changelog.outputs.changelog }}" ]]; then
+          release_body="${release_body}
+
+          ${{ steps.generate_changelog.outputs.changelog }}"
+        fi
+        echo "body<<EOF" >> $GITHUB_OUTPUT
+        echo "$release_body" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: ${{ env.RELEASE_NAME }}
+        tag_name: ${{ env.TAG_NAME }}
+        body: ${{ steps.construct_body.outputs.body }}
+        draft: false
+        prerelease: ${{ env.PRERELEASE == 'true' }}
+        files: |
+          ./Defender-rs.zip
+          ./Defender-rs-debug.zip
+```
