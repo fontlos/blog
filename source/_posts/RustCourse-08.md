@@ -382,7 +382,7 @@ feature1 = ["crate1"]
 ```toml
 [dependencies]
 crate1 = { version = "1.0", features = ["feature1"] }
-crate2 = { version = "1.0", , default-features = false, features = ["feature2"] } # 这将禁用默认 Feature 并单独开启指定 Feature
+crate2 = { version = "1.0", default-features = false, features = ["feature2"] } # 这将禁用默认 Feature 并单独开启指定 Feature
 ```
 
 ## 编译配置 -- Profile
@@ -769,7 +769,7 @@ Crate 一经发布无法修改无法删除, 只能通过新的版本号覆盖上
 
 为自己的项目启用 Actions 只需要在项目根目录创建 `.github/workflows/*.yml`, 这里面每个 `.yml` 文件都将被识别成一个独立的 Workflow, YML 文件通过缩进区分层级, 因此编写时要注意缩进.
 
-首先在 Github 创建一个项目, 至于其他的密钥配置就不多赘述了, 确保你拥有推送权限. 注意一点, 如果你希望你的 Workflow 能够发布 Release 及拥有写入权限, 需要导航到项目的 **Settings - Actions - General - Workflow permissions** 勾选 **Read and write permissions** 并保存, 然后将项目拉取到本地
+首先在 Github 创建一个项目, 至于其他的密钥配置就不多赘述了, 确保你拥有推送权限. 注意一点, 如果你希望你的 Workflow 能够发布 Release 即拥有写入权限, 需要导航到项目的 **Settings - Actions - General - Workflow permissions** 勾选 **Read and write permissions** 并保存, 然后将项目拉取到本地
 
 下面以我实际使用的一个为例
 
