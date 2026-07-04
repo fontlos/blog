@@ -218,9 +218,9 @@ println!("The value of y is: {}", y);
 - 字符类型: 表示单个 Unicode 字符, 储存为 `u8`
 - 数值类型: 有符号整型 (`i8` `i16` `i32` `i64` `i128` `isize`), 无符号整型 (`u8` `u16` `u32` `u64` `u128` `usize`) 和浮点型 (`f32` `f64`)
 - 字符串类型: 其底层为不定长类型 `str`, 更常用的是字符串切片 `&str` 和堆分配字符串 `String`, 其中 `String` 并不是原生类型, 字符串切片是静态的, 有固定大小且不可改变, 堆分配字符串是可变的
-- 数组: 有固定大小, 且元素为同一类型, 可表示为 `[T; N]`
+- 数组: 有固定大小, 且元素为同一类型的有序集合, 可表示为 `[T; N]`
 - 切片: 引用数组的一部分数据且无需复制, 可表示为 `&[T]`
-- 元组: 有固定大小, 元素类型可不同的有序列表
+- 元组: 有固定大小, 元素类型可不同的有序集合
 - 指针: 最底层是裸指针 `*const T` 和 `*mut T`, 解引用它们是不安全的, 需要放到 `unsafe` 块里
 - 函数: 本质是一个函数指针
 - 元类型: 其唯一的值是 `()`
@@ -234,21 +234,31 @@ let f: bool = false;
 let c = 'c';
 
 let x = 100;
-let y: u32 = 123_456;
+let y: u32 = 123_456; // 可以通过 `_` 分割数字提高可读性
 let z: f64 = -1.2e+3; // 浮点数可用科学计数法
 let zero = z.abs(); // 取绝对值操作
-let bin = 0b111_000;
-let oct = 0o1234_5670;
-let hex = 0xf23a9;
+
+// 特殊进制的整数类型, 默认都为 i32 类型
+let bin: i32 = 0b111_000; // 0b 开头表示二进制整数类型
+let oct = 0o1234_5670; // 0o 开头表示八进制整数类型
+let hex = 0xf23a9; // 0x 开头表示十六进制整数类型
 
 let strs = "Hello world";
 let strs: &'static str = "Hello, world!";
+// 字符串内部可以使用转义字符
+let strs: &'static str = "\"Hello!\nWorld!\"";
+// 原始字符串内部无需使用转义字符即可使用特殊字符
+// 下面这个字符串是包括引号的 `"Hello, world!"`
+let strs: &'static str = r#""Hello, world!""#;
+
 // 这不是原生类型哦
 let mut string = strs.to_string();
 
 let a = [0, 1, 2, 3];
 let b = &a[1..3];
 let mut ten_zeros: [i64; 10] = [0; 10];
+// 通过 `b""` 获取静态字符串对应的字节数组 &[u8; N]
+let bytes = b"Hello, world!";
 
 let tuple: (i32, &str) = (50, "hello");
 let (fifty, _) = tuple;

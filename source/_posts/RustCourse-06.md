@@ -20,7 +20,7 @@ Rust 通过 `impl` 关键字在 `struct` , `enum` 或者 `trait` 对象的上下
 - `&self`, 既不允许实现者移动对象也不允许修改, 对应的闭包特性为 `Fn`
 - `&mut self`, 允许实现者修改对象但不允许移动, 对应的闭包特性为 `FnMut`
 
-还有一个 `Self` 是用于主带当前的实例对象
+还有一个 `Self` 是用于指代当前的实例对象
 
 ```rust
 /// 矩形结构体
@@ -28,6 +28,7 @@ struct Rectangular {
     width: u32,
     height: u32,
 }
+
 // 为该结构体创建方法
 impl Rectangular {
     /// 创建矩形
@@ -38,7 +39,7 @@ impl Rectangular {
             height
         }
     }
-    /// 快速创建正方形
+    /// 快速创建正方形, 通过 Self 表示返回的就是结构体自身
     fn square(size: u32) -> Self {
         Rectangular {
             width: size,
@@ -173,10 +174,32 @@ fn display_array<T: std::fmt::Debug, const N: usize>(arr: [T; N]) {
 
 为了描述类型可以实现的抽象接口, Rust 通过 **Trait (特征)** 来定义 **函数类型签名**, 特性就相当于其他语言中的接口
 
+特征顾名思义就是一种共有的属性或行为
+
+例如对于 `Cat`, `Dog` 这些实例, 共同的特征包括都会它们都是动物, 因此可以用 `Animal` 这个特征来描述这一共有属性
+
+```rs
+// 通过 trait 关键字定义特征
+trait Animal {}
+
+struct Cat;
+
+// 同样通过 impl 块为具体的实例实现特定的特征
+impl Animal for Cat {}
+
+struct Dog;
+
+impl Animal for Dog {}
+```
+
+对于几何图形, 无论是 `Cricle` 还是 `Square`, 它们都有面积, 那么它们就都可以计算面积, 因此可以可以用 `HasArea` 这个特征来描述这一共有属性以及行为
+
 ```rust
-// 通过 trait 关键字定义特性
+// 通过 trait 关键字定义特征
+// 既然拥有 HasArea 这个特征, 那么这个实例就可以被计算面积
+// 那么这个特征就可以要求必须有一个 area 函数
+// 同时定义这个函数的签名, 要求该函数必须接受一个 &self 类型, 返回一个 f64 类型
 trait HasArea {
-    // 这个特性使 area 函数必须接受一个 &eslf 类型, 返回一个 f64 类型
     fn area(&self) -> f64;
 }
 
@@ -186,8 +209,10 @@ struct Circle {
     radius: f64,
 }
 
-impl HasArea for Circle {//将特性应用于该结构体
-    fn area(&self) -> f64 {//实现特性
+// 同样通过 impl 块为具体的实例实现特定的特征
+impl HasArea for Circle {
+    // 实现特性要求的方法
+    fn area(&self) -> f64 {
         std::f64::consts::PI * (self.radius * self.radius)
     }
 }
@@ -210,15 +235,33 @@ impl HasArea for Square {
 
 ## 特征约束
 
-其实在上面的示例中已经有所体现. 这里让我们再举一个例子:
+特征同样可以作为约束, 其实在上面的示例中已经有所体现. 这里让我们再举一些例子:
 
 ```rust
+// 任何一个实现了 Animal 特征的实例都能被接受, 虽然这个函数并没有使用它的参数
+fn print_animal<T: Animal>(_: T) {
+    println!("This is an animal.");
+}
+
+let cat = Cat;
+print_animal(cat);
+
+let dog = Dog;
+print_animal(dog);
+
+// 任何一个实现了 HasArea 特征的实例都能被接受, 并且在函数内部调用了该特征定义的方法
 fn print_area<T: HasArea>(shape: T) {
     println!("This shape has an area of {}", shape.area());
 }
+
+let cricle = Cricle {
+    x: 0.0,
+    y: 0.0,
+    radius: 2.0,
+}
 ```
 
-可以看到函数 `print_area()` 中的泛型参数 `T` 被添加了一个名为 `HasArea` 的 **Trait Bound (特征约束)**, 用以确保任何实现了`HasArea` 的类型将拥有一个 `area` 方法. Trait Bound, 可以使用 `+` 运算符
+可以看到函数 `print_area()` 中的泛型参数 `T` 被添加了一个名为 `HasArea` 的 **Trait Bound (特征约束)**, 用以确保任何实现了`HasArea` 的类型将拥有一个 `area` 方法. Trait Bound 可以使用 `+` 运算符进行拼接
 
 ```rust
 use std::fmt::Debug;
@@ -252,7 +295,7 @@ println!("add f64: {}", add(1.23, 1.23));
 
 只有能够加和的类型才能调用这个函数
 
-有的时候类型约束可能会非常长, 将会是我们的函数签名也变得非常长, 这种时候就可以通过使用 `where` 关键字
+有的时候类型约束可能会非常长, 将会使我们的函数签名也变得非常长, 这种时候就可以通过使用 `where` 关键字
 
 ```rust
 fn bar<T, K>(x: T, y: K)
@@ -296,10 +339,10 @@ trait People {
     // 默认方法
     fn greet(&self) {
         println!("Hello!");
-        }
+    }
 }
 
-// 继承
+// 继承: 学生作为一个人也应该有人的全部功能
 trait Student : People {
     fn study(&self);
 }
